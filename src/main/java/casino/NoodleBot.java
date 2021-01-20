@@ -23,8 +23,8 @@ public class NoodleBot implements CommandLineRunner {
     // todo: logging
     // todo: JITPACK!!!!!
     // todo: Data source (psql)
-    // todo: local conf (YAML/property)
     // todo: debug/prod runmode
+    // todo: ci
 
     @Override
     public void run(String... args) {
