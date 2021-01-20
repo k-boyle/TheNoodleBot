@@ -20,12 +20,6 @@ public class NoodleBot implements CommandLineRunner {
         SpringApplication.run(NoodleBot.class, args);
     }
 
-    // todo: logging
-    // todo: JITPACK!!!!!
-    // todo: Data source (psql)
-    // todo: debug/prod runmode
-    // todo: ci
-
     @Override
     public void run(String... args) {
         client.getEventDispatcher().on(ReadyEvent.class)
