@@ -10,15 +10,11 @@ version '1.0-SNAPSHOT'
 allprojects {
     repositories {
         mavenCentral()
-        maven {
-            name 'jitpack'
-            url 'https://www.jitpack.io'
-        }
     }
 }
 
 dependencies {
     implementation 'com.discord4j:discord4j-core:3.2.0-M1'
     implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'com.github.ocadotechnology:ocava:master-SNAPSHOT'
+    implementation 'com.google.guava:guava:30.1-jre'
 }
