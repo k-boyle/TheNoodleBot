@@ -1,6 +1,9 @@
 package casino.noodle.commands.framework;
 
-import casino.noodle.commands.framework.parsers.CommandMapper;
+import casino.noodle.commands.framework.mapping.CommandMap;
+import casino.noodle.commands.framework.module.CommandModule;
+import casino.noodle.commands.framework.module.CommandModuleBase;
+import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
@@ -49,7 +52,9 @@ public class CommandHandler {
             return this;
         }
 
-        public Builder withModule(Class<?> moduleClazz) {
+        public <T extends CommandModuleBase> Builder withModule(Class<T> moduleClazz) {
+            CommandModule commandModule = CommandModuleFactory.create(moduleClazz);
+//            this.commandMapper.map(commandModule);
             return this;
         }
 
