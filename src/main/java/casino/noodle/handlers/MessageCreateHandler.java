@@ -1,22 +1,25 @@
 package casino.noodle.handlers;
 
+import casino.noodle.commands.framework.CommandHandler;
+import casino.noodle.configurations.CommandConfiguration;
 import com.google.common.eventbus.Subscribe;
 import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.entity.Message;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Component;
 
 @Component
+@Import(CommandConfiguration.class)
 public class MessageCreateHandler implements Handler<MessageCreateEvent> {
-    private final Logger logger = LogManager.getLogger(MessageCreateHandler.class);
+    private final CommandHandler commandHandler;
+
+    @Autowired
+    public MessageCreateHandler(CommandHandler commandHandler) {
+        this.commandHandler = commandHandler;
+    }
 
     @Subscribe
     public void handleEvent(MessageCreateEvent event) {
-        Message msg = event.getMessage();
-
-        if (msg.getAuthor().map(user -> !user.isBot()).orElse(false) && msg.getContent().equals("ping")) {
-            msg.getChannel().flatMap(channel -> channel.createMessage("pong!")).block();
-        }
+        commandHandler.executeAsync(event.getMessage()).subscribe();
     }
 }

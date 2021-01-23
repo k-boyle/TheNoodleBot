@@ -1,5 +1,6 @@
-package casino.noodle;
+package casino.noodle.configurations;
 
+import casino.noodle.NoodleBotConfig;
 import casino.noodle.handlers.Handler;
 import com.google.common.eventbus.EventBus;
 import discord4j.core.DiscordClientBuilder;
