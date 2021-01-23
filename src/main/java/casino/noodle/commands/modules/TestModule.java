@@ -1,35 +1,24 @@
 package casino.noodle.commands.modules;
 
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.module.Command;
+import casino.noodle.commands.framework.module.CommandDescriptor;
 import casino.noodle.commands.framework.module.CommandModuleBase;
-import casino.noodle.commands.framework.module.Module;
+import casino.noodle.commands.framework.module.ModuleDescriptor;
 import casino.noodle.commands.framework.results.CommandMessageResult;
 import casino.noodle.commands.framework.results.CommandResult;
+import discord4j.core.GatewayDiscordClient;
 import reactor.core.publisher.Mono;
 
-@Module(groups = { "a", "b" }, description = "A test module")
+@ModuleDescriptor(groups = { "a", "b" }, description = "A test module")
 public class TestModule extends CommandModuleBase {
-    @Command(aliases = { "ping", "p" }, description = "A test command")
+    private final GatewayDiscordClient gatewayDiscordClient;
+
+    public TestModule(GatewayDiscordClient gatewayDiscordClient) {
+        this.gatewayDiscordClient = gatewayDiscordClient;
+    }
+
+    @CommandDescriptor(aliases = { "ping", "p" }, description = "A test command")
     public Mono<CommandResult> testCommand(CommandContext context, String input) {
-        return Mono.just(CommandMessageResult.from("pong " + input));
-    }
-
-    @Command(aliases = "test1")
-    public void command() {
-    }
-
-    @Command(aliases = "test2")
-    public void command(CommandContext context) {
-    }
-
-    @Command(aliases = "test2")
-    public Mono<CommandResult> command2() {
-        return Mono.empty();
-    }
-
-    @Command(aliases = "test3")
-    public Mono<Void> command3() {
-        return Mono.empty();
+        return Mono.just(CommandMessageResult.from("pong " + input + " " + gatewayDiscordClient.getSelfId()));
     }
 }

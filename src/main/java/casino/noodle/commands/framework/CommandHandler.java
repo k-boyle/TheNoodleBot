@@ -1,13 +1,14 @@
 package casino.noodle.commands.framework;
 
 import casino.noodle.commands.framework.mapping.CommandMap;
-import casino.noodle.commands.framework.module.CommandModule;
 import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
+import casino.noodle.commands.framework.module.Module;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
 import discord4j.core.object.entity.Message;
+import org.springframework.context.ApplicationContext;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
@@ -32,15 +33,14 @@ public class CommandHandler {
         return new Builder();
     }
 
-    public Mono<Result> executeAsync(Message message) {
-        String[] params = message.getContent().split(" ");
-
-
-
-        return Mono.empty();
+    public Mono<Result> executeAsync(Message message, ApplicationContext applicationContext) {
+        CommandContext context = new CommandContext(applicationContext, message);
+        return Builder.module.commands().stream().findFirst().get().commandCallback().execute(context, "hi").cast(Result.class);
     }
 
     public static class Builder {
+        public static Module module;
+
         private final Map<Class<?>, TypeParser<?>> typeParserByClass;
         private final CommandMap commandMap;
 
@@ -57,7 +57,7 @@ public class CommandHandler {
         }
 
         public <T extends CommandModuleBase> Builder withModule(Class<T> moduleClazz) {
-            CommandModule commandModule = CommandModuleFactory.create(moduleClazz);
+            module = CommandModuleFactory.create(moduleClazz);
 //            this.commandMapper.map(commandModule);
             return this;
         }

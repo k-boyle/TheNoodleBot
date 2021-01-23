@@ -11,4 +11,8 @@ public class CommandMessageResult extends CommandResult {
     public static CommandMessageResult from(String message) {
         return new CommandMessageResult(message);
     }
+
+    public String getMessage() {
+        return message;
+    }
 }

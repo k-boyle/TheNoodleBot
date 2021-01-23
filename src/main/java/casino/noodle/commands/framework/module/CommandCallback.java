@@ -6,5 +6,5 @@ import reactor.core.publisher.Mono;
 
 @FunctionalInterface
 public interface CommandCallback {
-    Mono<CommandResult> execute(CommandContext context);
+    Mono<CommandResult> execute(CommandContext context, Object... parameters);
 }
