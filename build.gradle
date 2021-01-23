@@ -11,13 +11,20 @@ allprojects {
     repositories {
         mavenCentral()
     }
+
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:unchecked"
+            options.compilerArgs << "-Xlint:preview"
+        }
+    }
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).all {
     options.compilerArgs += "--enable-preview"
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).all {
     jvmArgs += "--enable-preview"
 }
 
@@ -32,6 +39,12 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.7.0'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+compileJava {
+    options.compilerArgs += ['--enable-preview']
 }
 
 test {

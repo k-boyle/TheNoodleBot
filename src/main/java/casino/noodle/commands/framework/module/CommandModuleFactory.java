@@ -73,6 +73,7 @@ public final class CommandModuleFactory {
             && moduleDescriptorAnnotation.groups().length > 0;
     }
 
+    @SuppressWarnings("unchecked")
     private static CommandCallback createCommandCallback(Class<?> moduleClass, Method method) {
         return (commandContext, parameters) -> {
             try {
@@ -86,7 +87,6 @@ public final class CommandModuleFactory {
                 Object[] parametersWithContext = new Object[1 + parameters.length];
                 parametersWithContext[0] = commandContext;
                 System.arraycopy(parameters, 0, parametersWithContext, 1, parameters.length);
-                //noinspection unchecked
                 return (Mono<CommandResult>) method.invoke(module, parametersWithContext);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
                 return Mono.error(e);
