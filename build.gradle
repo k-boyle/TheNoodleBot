@@ -13,6 +13,18 @@ allprojects {
     }
 }
 
+tasks.withType(JavaCompile) {
+    options.compilerArgs += "--enable-preview"
+}
+
+tasks.withType(Test) {
+    jvmArgs += "--enable-preview"
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs += '--enable-preview'
+}
+
 dependencies {
     implementation 'com.discord4j:discord4j-core:3.2.0-M1'
     implementation 'org.springframework.boot:spring-boot-starter'
