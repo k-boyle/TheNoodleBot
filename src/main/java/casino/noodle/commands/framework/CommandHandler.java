@@ -16,15 +16,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class CommandHandler {
     private final ConcurrentHashMap<Class<?>, TypeParser<?>> typeParserByClass;
-    private final CommandMapper commandMapper;
+    private final CommandMap commandMap;
     private final PrefixProvider prefixProvider;
 
     private CommandHandler(
             Map<Class<?>, TypeParser<?>> typeParserByClass,
-            CommandMapper commandMapper,
+            CommandMap commandMapper,
             PrefixProvider prefixProvider) {
         this.typeParserByClass = new ConcurrentHashMap<>(typeParserByClass);
-        this.commandMapper = commandMapper;
+        this.commandMap = commandMapper;
         this.prefixProvider = prefixProvider;
     }
 
@@ -33,18 +33,22 @@ public class CommandHandler {
     }
 
     public Mono<Result> executeAsync(Message message) {
+        String[] params = message.getContent().split(" ");
+
+
+
         return Mono.empty();
     }
 
     public static class Builder {
         private final Map<Class<?>, TypeParser<?>> typeParserByClass;
-        private final CommandMapper commandMapper;
+        private final CommandMap commandMap;
 
         private PrefixProvider prefixProvider;
 
         public Builder() {
             this.typeParserByClass = new HashMap<>();
-            this.commandMapper = new CommandMapper();
+            this.commandMap = new CommandMap();
         }
 
         public <T> Builder withTypeParser(Class<T> clazz, TypeParser<T> parser) {
@@ -65,7 +69,7 @@ public class CommandHandler {
 
         public CommandHandler build() {
             Preconditions.checkNotNull(this.prefixProvider, "A PrefixProvider must be specified");
-            return new CommandHandler(this.typeParserByClass, this.commandMapper, this.prefixProvider);
+            return new CommandHandler(this.typeParserByClass, this.commandMap, this.prefixProvider);
         }
     }
 }
