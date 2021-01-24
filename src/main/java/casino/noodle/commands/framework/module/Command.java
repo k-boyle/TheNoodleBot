@@ -7,7 +7,6 @@ public record Command(
         ImmutableSet<String> aliases,
         String description,
         CommandCallback commandCallback) {
-
     static Builder builder() {
         return new Builder();
     }

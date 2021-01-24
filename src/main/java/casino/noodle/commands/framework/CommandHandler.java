@@ -7,16 +7,16 @@ import casino.noodle.commands.framework.module.Module;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import discord4j.core.object.entity.Message;
 import org.springframework.context.ApplicationContext;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class CommandHandler {
-    private final ConcurrentHashMap<Class<?>, TypeParser<?>> typeParserByClass;
+    private final ImmutableMap<Class<?>, TypeParser<?>> typeParserByClass;
     private final CommandMap commandMap;
     private final PrefixProvider prefixProvider;
 
@@ -24,7 +24,7 @@ public class CommandHandler {
             Map<Class<?>, TypeParser<?>> typeParserByClass,
             CommandMap commandMapper,
             PrefixProvider prefixProvider) {
-        this.typeParserByClass = new ConcurrentHashMap<>(typeParserByClass);
+        this.typeParserByClass = ImmutableMap.copyOf(typeParserByClass);
         this.commandMap = commandMapper;
         this.prefixProvider = prefixProvider;
     }
@@ -34,21 +34,18 @@ public class CommandHandler {
     }
 
     public Mono<Result> executeAsync(Message message, ApplicationContext applicationContext) {
-        CommandContext context = new CommandContext(applicationContext, message);
-        return Builder.module.commands().stream().findFirst().get().commandCallback().execute(context, "hi").cast(Result.class);
+        return Mono.empty();
     }
 
     public static class Builder {
-        public static Module module;
-
         private final Map<Class<?>, TypeParser<?>> typeParserByClass;
-        private final CommandMap commandMap;
+        private final CommandMap.Builder commandMap;
 
         private PrefixProvider prefixProvider;
 
         public Builder() {
             this.typeParserByClass = new HashMap<>();
-            this.commandMap = new CommandMap();
+            this.commandMap = CommandMap.builder();
         }
 
         public <T> Builder withTypeParser(Class<T> clazz, TypeParser<T> parser) {
@@ -57,8 +54,8 @@ public class CommandHandler {
         }
 
         public <T extends CommandModuleBase> Builder withModule(Class<T> moduleClazz) {
-            module = CommandModuleFactory.create(moduleClazz);
-//            this.commandMapper.map(commandModule);
+            Module module = CommandModuleFactory.create(moduleClazz);
+            this.commandMap.map(module);
             return this;
         }
 
@@ -69,7 +66,7 @@ public class CommandHandler {
 
         public CommandHandler build() {
             Preconditions.checkNotNull(this.prefixProvider, "A PrefixProvider must be specified");
-            return new CommandHandler(this.typeParserByClass, this.commandMap, this.prefixProvider);
+            return new CommandHandler(this.typeParserByClass, this.commandMap.build(), this.prefixProvider);
         }
     }
 }

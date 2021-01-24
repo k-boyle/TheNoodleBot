@@ -7,7 +7,6 @@ public record Module(
         ImmutableSet<String> groups,
         ImmutableList<Command> commands,
         String description) {
-
     static Builder builder() {
         return new Builder();
     }
