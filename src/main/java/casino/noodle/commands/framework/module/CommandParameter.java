@@ -2,10 +2,11 @@ package casino.noodle.commands.framework.module;
 
 import com.google.common.base.Preconditions;
 
-public record Parameter(
+public record CommandParameter(
         Class<?> type,
         String description,
-        String name) {
+        String name,
+        boolean remainder) {
     static Builder builder() {
         return new Builder();
     }
@@ -14,6 +15,7 @@ public record Parameter(
         private Class<?> type;
         private String description;
         private String name;
+        private boolean remainder;
 
         private Builder() {
         }
@@ -33,10 +35,15 @@ public record Parameter(
             return this;
         }
 
-        public Parameter build() {
+        public Builder withRemainder(boolean remainder) {
+            this.remainder = remainder;
+            return this;
+        }
+
+        public CommandParameter build() {
             Preconditions.checkState(type != null, "A parameter type must be specified");
             Preconditions.checkState(name != null, "A parameter name must be specified");
-            return new Parameter(type, description, name);
+            return new CommandParameter(type, description, name, remainder);
         }
     }
 }

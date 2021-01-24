@@ -3,16 +3,13 @@ package casino.noodle.commands.framework.module;
 import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.module.annotations.CommandDescriptor;
 import casino.noodle.commands.framework.module.annotations.ModuleDescriptor;
+import casino.noodle.commands.framework.module.annotations.ParametersDescriptor;
 import casino.noodle.commands.framework.results.CommandResult;
 import com.google.common.base.Preconditions;
 import org.springframework.context.ApplicationContext;
 import reactor.core.publisher.Mono;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.Arrays;
 
 public final class CommandModuleFactory {
@@ -47,7 +44,23 @@ public final class CommandModuleFactory {
                     .withDescription(commandDescriptorAnnotation.description())
                     .withCallback(createCommandCallback(clazz, method));
 
-                // todo add parameters
+                for (Parameter parameter : method.getParameters()) {
+                    Class<?> parameterType = parameter.getType();
+                    CommandParameter.Builder cmdParameterBuilder = CommandParameter.builder()
+                        .withType(parameterType)
+                        .withName(parameter.getName());
+
+                    ParametersDescriptor parameterDescriptorAnnotation = parameter.getAnnotation(ParametersDescriptor.class);
+                    if (parameterDescriptorAnnotation != null) {
+                        cmdParameterBuilder
+                            .withDescription(parameterDescriptorAnnotation.description())
+                            .withRemainder(parameterDescriptorAnnotation.remainder())
+                            .withName(parameterDescriptorAnnotation.name());
+                    }
+
+                    commandBuilder.withParameter(cmdParameterBuilder.build());
+                }
+
                 moduleBuilder.withCommand(commandBuilder.build());
             }
         }

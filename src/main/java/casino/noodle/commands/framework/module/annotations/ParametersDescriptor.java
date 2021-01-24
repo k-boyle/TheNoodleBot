@@ -6,8 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface CommandDescriptor {
-    String[] aliases();
+@Target(ElementType.PARAMETER)
+public @interface ParametersDescriptor {
+    String name() default "";
     String description() default "";
+    boolean remainder() default false;
 }

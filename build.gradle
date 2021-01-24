@@ -11,21 +11,18 @@ allprojects {
     repositories {
         mavenCentral()
     }
+}
 
-    gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xlint:unchecked"
-            options.compilerArgs << "-Xlint:preview"
-        }
-    }
+compileJava {
+    options.compilerArgs += '-parameters'
 }
 
 tasks.withType(JavaCompile).all {
-    options.compilerArgs += "--enable-preview"
+    options.compilerArgs += '--enable-preview'
 }
 
 tasks.withType(Test).all {
-    jvmArgs += "--enable-preview"
+    jvmArgs += '--enable-preview'
 }
 
 tasks.withType(JavaExec) {
