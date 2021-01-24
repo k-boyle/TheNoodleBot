@@ -1,6 +1,8 @@
 package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.CommandContext;
+import casino.noodle.commands.framework.module.annotations.CommandDescriptor;
+import casino.noodle.commands.framework.module.annotations.ModuleDescriptor;
 import casino.noodle.commands.framework.results.CommandResult;
 import com.google.common.base.Preconditions;
 import org.springframework.context.ApplicationContext;
@@ -40,13 +42,13 @@ public final class CommandModuleFactory {
                     "A command must have aliases if the module has no groups"
                 );
 
-                moduleBuilder.withCommand(
-                    Command.builder()
-                        .withAliases(commandDescriptorAnnotation.aliases())
-                        .withDescription(commandDescriptorAnnotation.description())
-                        .withCallback(createCommandCallback(clazz, method))
-                        .build()
-                );
+                Command.Builder commandBuilder = Command.builder()
+                    .withAliases(commandDescriptorAnnotation.aliases())
+                    .withDescription(commandDescriptorAnnotation.description())
+                    .withCallback(createCommandCallback(clazz, method));
+
+                // todo add parameters
+                moduleBuilder.withCommand(commandBuilder.build());
             }
         }
 

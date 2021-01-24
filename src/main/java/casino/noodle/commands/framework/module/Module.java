@@ -20,7 +20,6 @@ public record Module(
         private Builder() {
             this.groups = ImmutableSet.builder();
             this.commands = ImmutableList.builder();
-            this.description = "";
         }
 
         public Builder withGroups(String... groups) {

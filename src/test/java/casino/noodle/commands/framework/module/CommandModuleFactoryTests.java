@@ -1,6 +1,8 @@
 package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.CommandContext;
+import casino.noodle.commands.framework.module.annotations.CommandDescriptor;
+import casino.noodle.commands.framework.module.annotations.ModuleDescriptor;
 import casino.noodle.commands.framework.results.CommandResult;
 import com.google.common.collect.ImmutableSet;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+// todo test parameters
 public class CommandModuleFactoryTests {
     @Test
     public void testCorrectModuleAndCommandIsCreated() {
@@ -45,7 +48,7 @@ public class CommandModuleFactoryTests {
         Module module = CommandModuleFactory.create(TestModuleThree.class);
 
         assertEquals(ImmutableSet.of(), module.groups());
-        assertEquals("", module.description());
+        assertEquals(null, module.description());
         assertEquals(1, module.commands().size());
 
         Command command = module.commands().get(0);

@@ -53,7 +53,7 @@ class CommandNode {
                     }
 
                     node.addCommand(command, paths, index + 1);
-                   return node;
+                    return node;
                 });
             }
 
@@ -62,7 +62,15 @@ class CommandNode {
 
         private void assertUniqueCommand(Command command, String path, List<Command> commands) {
             for (Command otherCommand : commands) {
-                // add commands signature
+                Command.Signature commandSignature = command.signature();
+                Command.Signature otherCommandSignature = otherCommand.signature();
+
+                Preconditions.checkState(
+                    !commandSignature.equals(otherCommandSignature),
+                    "Multiple matching signatures, %s for path %s",
+                    commandSignature,
+                    path
+                );
             }
         }
 

@@ -26,6 +26,7 @@ public class CommandMap {
         }
 
         public Builder map(Module module) {
+            // todo if throw invalid state
             map0(module, new ArrayList<>());
             return this;
         }
