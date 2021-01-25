@@ -1,12 +1,12 @@
 package casino.noodle.commands.framework.module;
 
+import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.module.annotations.CommandDescription;
 import casino.noodle.commands.framework.module.annotations.ModuleDescription;
 import casino.noodle.commands.framework.module.annotations.ParameterDescription;
 import casino.noodle.commands.framework.results.CommandResult;
 import com.google.common.base.Preconditions;
-import org.springframework.context.ApplicationContext;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
@@ -18,13 +18,18 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 
 public final class CommandModuleFactory {
+    private static final String SPACE = " ";
+
     private CommandModuleFactory() {
     }
 
-    public static <T extends CommandModuleBase> Module create(Class<T> clazz) {
+    public static <T extends CommandModuleBase> Module create(Class<T> clazz, BeanProvider beanProvider) {
         Module.Builder moduleBuilder = Module.builder();
         ModuleDescription moduleDescriptionAnnotation = clazz.getAnnotation(ModuleDescription.class);
         if (moduleDescriptionAnnotation != null) {
+            for (String group : moduleDescriptionAnnotation.groups()) {
+                Preconditions.checkState(!group.contains(SPACE), "Group %s contains a space", group);
+            }
             moduleBuilder
                 .withGroups(moduleDescriptionAnnotation.groups())
                 .withDescription(moduleDescriptionAnnotation.description());
@@ -87,7 +92,13 @@ public final class CommandModuleFactory {
             && parameterTypes[0].isAssignableFrom(CommandContext.class);
     }
 
-    private static boolean isValidAliases(ModuleDescription moduleDescriptionAnnotation, CommandDescription commandDescriptionAnnotation) {
+    private static boolean isValidAliases(
+            ModuleDescription moduleDescriptionAnnotation,
+            CommandDescription commandDescriptionAnnotation) {
+        for (String alias : commandDescriptionAnnotation.aliases()) {
+            Preconditions.checkState(!alias.contains(SPACE), "Alias %s contains a space", alias);
+        }
+
         return commandDescriptionAnnotation.aliases().length > 0
             || moduleDescriptionAnnotation != null
             && moduleDescriptionAnnotation.groups().length > 0;
@@ -98,7 +109,7 @@ public final class CommandModuleFactory {
         return (commandContext, parameters) -> {
             try {
                 // todo method handles
-                ApplicationContext applicationContext = commandContext.getApplicationContext();
+                BeanProvider applicationContext = commandContext.getBeanProvider();
                 Constructor<?> constructor = moduleClass.getConstructors()[0];
                 Object[] constructorArguments = Arrays.stream(constructor.getParameterTypes())
                     .map(applicationContext::getBean)

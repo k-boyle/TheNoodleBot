@@ -8,6 +8,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface ModuleDescription {
-    String[] groups();
+    String[] groups() default {};
     String description() default "";
 }

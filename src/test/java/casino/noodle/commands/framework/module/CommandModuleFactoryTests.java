@@ -1,5 +1,6 @@
 package casino.noodle.commands.framework.module;
 
+import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.module.annotations.CommandDescription;
 import casino.noodle.commands.framework.module.annotations.ModuleDescription;
@@ -20,11 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// todo test parameters
 public class CommandModuleFactoryTests {
     @Test
     public void testCorrectModuleAndCommandIsCreated() {
-        Module module = CommandModuleFactory.create(TestModuleOne.class);
+        Module module = CommandModuleFactory.create(TestModuleOne.class, BeanProvider.EmptyBeanProvider.INSTANCE);
 
         assertEquals(ImmutableSet.of("group1", "group2"), module.groups());
         assertEquals("This is a test module", module.description());
@@ -38,7 +38,7 @@ public class CommandModuleFactoryTests {
 
     @Test
     public void testCorrectModuleAndGroupCommandIsCreated() {
-        Module module = CommandModuleFactory.create(TestModuleTwo.class);
+        Module module = CommandModuleFactory.create(TestModuleTwo.class, BeanProvider.EmptyBeanProvider.INSTANCE);
 
         assertEquals(ImmutableSet.of("group1", "group2"), module.groups());
         assertEquals(1, module.commands().size());
@@ -50,7 +50,7 @@ public class CommandModuleFactoryTests {
 
     @Test
     public void testCorrectDescriptionlessModuleAndCommandIsCreated() {
-        Module module = CommandModuleFactory.create(TestModuleThree.class);
+        Module module = CommandModuleFactory.create(TestModuleThree.class, BeanProvider.EmptyBeanProvider.INSTANCE);
 
         assertEquals(ImmutableSet.of(), module.groups());
         assertNull(module.description());
@@ -64,13 +64,12 @@ public class CommandModuleFactoryTests {
 
     @Test
     public void testCorrectParameterDetailsAppliedCorrectly() {
-        Module module = CommandModuleFactory.create(TestModuleEight.class);
+        Module module = CommandModuleFactory.create(TestModuleEight.class, BeanProvider.EmptyBeanProvider.INSTANCE);
 
         assertEquals(1, module.commands().size());
 
         ImmutableList<CommandParameter> parameters = module.commands().get(0).parameters();
 
-//        assertEquals(ImmutableSet.of("one", "two"), command.aliases());
         assertEquals(3, parameters.size());
 
         CommandParameter param1 = parameters.get(0);
@@ -92,10 +91,16 @@ public class CommandModuleFactoryTests {
         assertTrue(param3.remainder());
     }
 
+    @Test
+    public void testTwoCommandsAreCreated() {
+        Module module = CommandModuleFactory.create(TestModuleThirteen.class, BeanProvider.EmptyBeanProvider.INSTANCE);
+        assertEquals(2, module.commands().size());
+    }
+
     @ParameterizedTest
     @MethodSource("testInvalidCommandSignatureSource")
     public void testInvalidCommandSignature(Class<? extends CommandModuleBase> moduleClazz) {
-        assertThrows(IllegalStateException.class, () -> CommandModuleFactory.create(moduleClazz));
+        assertThrows(IllegalStateException.class, () -> CommandModuleFactory.create(moduleClazz, BeanProvider.EmptyBeanProvider.INSTANCE));
     }
 
     // Groups with commands
@@ -103,7 +108,7 @@ public class CommandModuleFactoryTests {
     private static class TestModuleOne extends CommandModuleBase {
         @CommandDescription(aliases = { "one", "two" }, description = "This is a test command")
         public Mono<CommandResult> command(CommandContext context) {
-            return Mono.empty();
+            return empty();
         }
     }
 
@@ -112,7 +117,7 @@ public class CommandModuleFactoryTests {
     private static class TestModuleTwo extends CommandModuleBase {
         @CommandDescription(aliases = {})
         public Mono<CommandResult> command(CommandContext context) {
-            return Mono.empty();
+            return empty();
         }
     }
 
@@ -120,7 +125,7 @@ public class CommandModuleFactoryTests {
     private static class TestModuleThree extends CommandModuleBase {
         @CommandDescription(aliases = { "one", "two" }, description = "This is a test command")
         public Mono<CommandResult> command(CommandContext context) {
-            return Mono.empty();
+            return empty();
         }
     }
 
@@ -128,7 +133,7 @@ public class CommandModuleFactoryTests {
     private static class TestModuleFour extends CommandModuleBase {
         @CommandDescription(aliases = {})
         public Mono<CommandResult> command(CommandContext context) {
-            return Mono.empty();
+            return empty();
         }
     }
 
@@ -136,7 +141,7 @@ public class CommandModuleFactoryTests {
     private static class TestModuleFive extends CommandModuleBase {
         @CommandDescription(aliases = { "one" })
         public Mono<CommandResult> command() {
-            return Mono.empty();
+            return empty();
         }
     }
 
@@ -163,7 +168,7 @@ public class CommandModuleFactoryTests {
                 int temp,
                 @ParameterDescription(name = "input",description = "remaining inputs", remainder = true)
                 String last) {
-            return Mono.empty();
+            return empty();
         }
     }
 
@@ -175,7 +180,7 @@ public class CommandModuleFactoryTests {
                 @ParameterDescription(remainder = true)
                 int temp,
                 String last) {
-            return Mono.empty();
+            return empty();
         }
     }
 
@@ -188,11 +193,46 @@ public class CommandModuleFactoryTests {
                 String temp,
             @ParameterDescription(remainder = true)
                 String last) {
-            return Mono.empty();
+            return empty();
+        }
+    }
+    
+    // Group with space
+    @ModuleDescription(groups = "a space")
+    private static class TestModuleEleven extends CommandModuleBase {        
+    }
+
+    // Alias with space
+    private static class TestModuleTwelve extends CommandModuleBase {
+        @CommandDescription(aliases = "a space")
+        public Mono<CommandResult> command(CommandContext context) {
+            return empty();
+        }
+    }
+
+    // Two commands
+    private static class TestModuleThirteen extends CommandModuleBase {
+        @CommandDescription(aliases = { "one" })
+        public Mono<CommandResult> command(CommandContext context) {
+            return empty();
+        }
+
+        @CommandDescription(aliases = { "two" })
+        public Mono<CommandResult> command2(CommandContext context) {
+            return empty();
         }
     }
 
     private static Stream<Class<? extends CommandModuleBase>> testInvalidCommandSignatureSource() {
-        return Stream.of(TestModuleFour.class, TestModuleFive.class, TestModuleSix.class, TestModuleSeven.class, TestModuleNine.class, TestModuleTen.class);
+        return Stream.of(
+            TestModuleFour.class,
+            TestModuleFive.class,
+            TestModuleSix.class,
+            TestModuleSeven.class,
+            TestModuleNine.class,
+            TestModuleTen.class,
+            TestModuleEleven.class,
+            TestModuleTwelve.class
+        );
     }
 }

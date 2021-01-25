@@ -8,4 +8,8 @@ public abstract class CommandModuleBase {
     protected Mono<CommandResult> reply(String reply) {
         return Mono.just(CommandMessageResult.from(reply));
     }
+
+    protected Mono<CommandResult> empty() {
+        return Mono.empty();
+    }
 }
