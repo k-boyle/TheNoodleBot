@@ -1,9 +1,9 @@
 package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.module.annotations.CommandDescriptor;
-import casino.noodle.commands.framework.module.annotations.ModuleDescriptor;
-import casino.noodle.commands.framework.module.annotations.ParametersDescriptor;
+import casino.noodle.commands.framework.module.annotations.CommandDescription;
+import casino.noodle.commands.framework.module.annotations.ModuleDescription;
+import casino.noodle.commands.framework.module.annotations.ParameterDescription;
 import casino.noodle.commands.framework.results.CommandResult;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -14,7 +14,11 @@ import reactor.core.publisher.Mono;
 
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // todo test parameters
 public class CommandModuleFactoryTests {
@@ -95,18 +99,18 @@ public class CommandModuleFactoryTests {
     }
 
     // Groups with commands
-    @ModuleDescriptor(groups = { "group1", "group2" }, description = "This is a test module")
+    @ModuleDescription(groups = { "group1", "group2" }, description = "This is a test module")
     private static class TestModuleOne extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one", "two" }, description = "This is a test command")
+        @CommandDescription(aliases = { "one", "two" }, description = "This is a test command")
         public Mono<CommandResult> command(CommandContext context) {
             return Mono.empty();
         }
     }
 
     // Group command (default command)
-    @ModuleDescriptor(groups = { "group1", "group2" })
+    @ModuleDescription(groups = { "group1", "group2" })
     private static class TestModuleTwo extends CommandModuleBase {
-        @CommandDescriptor(aliases = {})
+        @CommandDescription(aliases = {})
         public Mono<CommandResult> command(CommandContext context) {
             return Mono.empty();
         }
@@ -114,7 +118,7 @@ public class CommandModuleFactoryTests {
 
     // Root commands
     private static class TestModuleThree extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one", "two" }, description = "This is a test command")
+        @CommandDescription(aliases = { "one", "two" }, description = "This is a test command")
         public Mono<CommandResult> command(CommandContext context) {
             return Mono.empty();
         }
@@ -122,7 +126,7 @@ public class CommandModuleFactoryTests {
 
     // Missing group and commands
     private static class TestModuleFour extends CommandModuleBase {
-        @CommandDescriptor(aliases = {})
+        @CommandDescription(aliases = {})
         public Mono<CommandResult> command(CommandContext context) {
             return Mono.empty();
         }
@@ -130,7 +134,7 @@ public class CommandModuleFactoryTests {
 
     // Missing command context in command signature
     private static class TestModuleFive extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one" })
+        @CommandDescription(aliases = { "one" })
         public Mono<CommandResult> command() {
             return Mono.empty();
         }
@@ -138,7 +142,7 @@ public class CommandModuleFactoryTests {
 
     // Doesn't return a Mono
     private static class TestModuleSix extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one" })
+        @CommandDescription(aliases = { "one" })
         public void command(CommandContext context) {
         }
     }
@@ -146,18 +150,18 @@ public class CommandModuleFactoryTests {
     // Missing command context in command signature
     // && Doesn't return a Mono
     private static class TestModuleSeven extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one" })
+        @CommandDescription(aliases = { "one" })
         public void command() {
         }
     }
 
     // Parameter Remainder: Valid parameters
     private static class TestModuleEight extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one" })
+        @CommandDescription(aliases = { "one" })
         public Mono<CommandResult> command(
                 CommandContext context,
                 int temp,
-                @ParametersDescriptor(name = "input",description = "remaining inputs", remainder = true)
+                @ParameterDescription(name = "input",description = "remaining inputs", remainder = true)
                 String last) {
             return Mono.empty();
         }
@@ -165,10 +169,10 @@ public class CommandModuleFactoryTests {
 
     // Parameters Remainder: Not on end (last parameter)
     private static class TestModuleNine extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one" })
+        @CommandDescription(aliases = { "one" })
         public Mono<CommandResult> command(
                 CommandContext context,
-                @ParametersDescriptor(remainder = true)
+                @ParameterDescription(remainder = true)
                 int temp,
                 String last) {
             return Mono.empty();
@@ -177,12 +181,12 @@ public class CommandModuleFactoryTests {
 
     // Parameters Remainder: Multiple remainders
     private static class TestModuleTen extends CommandModuleBase {
-        @CommandDescriptor(aliases = { "one" })
+        @CommandDescription(aliases = { "one" })
         public Mono<CommandResult> command(
             CommandContext context,
-            @ParametersDescriptor(remainder = true)
+            @ParameterDescription(remainder = true)
                 String temp,
-            @ParametersDescriptor(remainder = true)
+            @ParameterDescription(remainder = true)
                 String last) {
             return Mono.empty();
         }

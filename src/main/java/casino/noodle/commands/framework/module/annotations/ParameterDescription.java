@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
-public @interface ParametersDescriptor {
+public @interface ParameterDescription {
     String name() default "";
     String description() default "";
     boolean remainder() default false;

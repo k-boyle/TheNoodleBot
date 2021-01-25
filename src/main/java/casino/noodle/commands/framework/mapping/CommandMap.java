@@ -2,6 +2,8 @@ package casino.noodle.commands.framework.mapping;
 
 import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.module.Module;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +16,10 @@ public class CommandMap {
         this.rootNode = rootNode;
     }
 
+    public ImmutableList<CommandSearchResult> findCommands(String input) {
+        return rootNode.findCommands(input);
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -21,13 +27,22 @@ public class CommandMap {
     public static class Builder {
         private final CommandNode.Builder rootNode;
 
+        private boolean invalidState;
+
         private Builder() {
             this.rootNode = CommandNode.builder();
         }
 
         public Builder map(Module module) {
-            // todo if throw invalid state
-            map0(module, new ArrayList<>());
+            Preconditions.checkState(!invalidState, "CommandMap has been put into an invalid state");
+
+            try {
+                map0(module, new ArrayList<>());
+            } catch (IllegalStateException e) {
+                invalidState = true;
+                throw e;
+            }
+
             return this;
         }
 
@@ -73,6 +88,7 @@ public class CommandMap {
         }
 
         public CommandMap build() {
+            Preconditions.checkState(!invalidState, "CommandMap has been put into an invalid state");
             return new CommandMap(this.rootNode.build());
         }
     }

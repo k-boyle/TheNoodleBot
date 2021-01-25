@@ -1,12 +1,14 @@
 package casino.noodle.commands.framework;
 
 import casino.noodle.commands.framework.mapping.CommandMap;
+import casino.noodle.commands.framework.mapping.CommandSearchResult;
 import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import discord4j.core.object.entity.Message;
 import org.springframework.context.ApplicationContext;
@@ -34,6 +36,7 @@ public class CommandHandler {
     }
 
     public Mono<Result> executeAsync(Message message, ApplicationContext applicationContext) {
+        ImmutableList<CommandSearchResult> commands = commandMap.findCommands(message.getContent());
         return Mono.empty();
     }
 

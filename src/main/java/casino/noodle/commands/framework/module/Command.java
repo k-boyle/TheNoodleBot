@@ -4,6 +4,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.stream.Collectors;
+
 /* todo
     - name (in build() Precondition too)
  */
@@ -63,12 +65,20 @@ public record Command(
                 );
             }
 
+            Signature commandSignature = new Signature(
+                !parameters.isEmpty() && parameters.get(parameters.size() - 1).remainder(),
+                parameters.stream()
+                    .map(CommandParameter::type)
+                    .map(Class::toString)
+                    .collect(Collectors.joining(";"))
+            );
+
             return new Command(
                 this.aliases.build(),
                 this.description,
                 this.commandCallback,
                 parameters,
-                null);
+                commandSignature);
         }
     }
 

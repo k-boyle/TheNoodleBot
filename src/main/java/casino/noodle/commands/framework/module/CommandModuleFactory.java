@@ -1,15 +1,20 @@
 package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.module.annotations.CommandDescriptor;
-import casino.noodle.commands.framework.module.annotations.ModuleDescriptor;
-import casino.noodle.commands.framework.module.annotations.ParametersDescriptor;
+import casino.noodle.commands.framework.module.annotations.CommandDescription;
+import casino.noodle.commands.framework.module.annotations.ModuleDescription;
+import casino.noodle.commands.framework.module.annotations.ParameterDescription;
 import casino.noodle.commands.framework.results.CommandResult;
 import com.google.common.base.Preconditions;
 import org.springframework.context.ApplicationContext;
 import reactor.core.publisher.Mono;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 
 public final class CommandModuleFactory {
@@ -18,30 +23,30 @@ public final class CommandModuleFactory {
 
     public static <T extends CommandModuleBase> Module create(Class<T> clazz) {
         Module.Builder moduleBuilder = Module.builder();
-        ModuleDescriptor moduleDescriptorAnnotation = clazz.getAnnotation(ModuleDescriptor.class);
-        if (moduleDescriptorAnnotation != null) {
+        ModuleDescription moduleDescriptionAnnotation = clazz.getAnnotation(ModuleDescription.class);
+        if (moduleDescriptionAnnotation != null) {
             moduleBuilder
-                .withGroups(moduleDescriptorAnnotation.groups())
-                .withDescription(moduleDescriptorAnnotation.description());
+                .withGroups(moduleDescriptionAnnotation.groups())
+                .withDescription(moduleDescriptionAnnotation.description());
         }
 
         Method[] methods = clazz.getMethods();
         for (Method method : methods) {
-            CommandDescriptor commandDescriptorAnnotation = method.getAnnotation(CommandDescriptor.class);
-            if (commandDescriptorAnnotation != null) {
+            CommandDescription commandDescriptionAnnotation = method.getAnnotation(CommandDescription.class);
+            if (commandDescriptionAnnotation != null) {
                 Preconditions.checkState(
                     isValidCommandSignature(method),
                     "Method %s has invalid signature",
                     method
                 );
                 Preconditions.checkState(
-                    isValidAliases(moduleDescriptorAnnotation, commandDescriptorAnnotation),
+                    isValidAliases(moduleDescriptionAnnotation, commandDescriptionAnnotation),
                     "A command must have aliases if the module has no groups"
                 );
 
                 Command.Builder commandBuilder = Command.builder()
-                    .withAliases(commandDescriptorAnnotation.aliases())
-                    .withDescription(commandDescriptorAnnotation.description())
+                    .withAliases(commandDescriptionAnnotation.aliases())
+                    .withDescription(commandDescriptionAnnotation.description())
                     .withCallback(createCommandCallback(clazz, method));
 
                 for (Parameter parameter : method.getParameters()) {
@@ -50,12 +55,12 @@ public final class CommandModuleFactory {
                         .withType(parameterType)
                         .withName(parameter.getName());
 
-                    ParametersDescriptor parameterDescriptorAnnotation = parameter.getAnnotation(ParametersDescriptor.class);
-                    if (parameterDescriptorAnnotation != null) {
+                    ParameterDescription parameterDescriptionAnnotation = parameter.getAnnotation(ParameterDescription.class);
+                    if (parameterDescriptionAnnotation != null) {
                         cmdParameterBuilder
-                            .withDescription(parameterDescriptorAnnotation.description())
-                            .withRemainder(parameterDescriptorAnnotation.remainder())
-                            .withName(parameterDescriptorAnnotation.name());
+                            .withDescription(parameterDescriptionAnnotation.description())
+                            .withRemainder(parameterDescriptionAnnotation.remainder())
+                            .withName(parameterDescriptionAnnotation.name());
                     }
 
                     commandBuilder.withParameter(cmdParameterBuilder.build());
@@ -82,10 +87,10 @@ public final class CommandModuleFactory {
             && parameterTypes[0].isAssignableFrom(CommandContext.class);
     }
 
-    private static boolean isValidAliases(ModuleDescriptor moduleDescriptorAnnotation, CommandDescriptor commandDescriptorAnnotation) {
-        return commandDescriptorAnnotation.aliases().length > 0
-            || moduleDescriptorAnnotation != null
-            && moduleDescriptorAnnotation.groups().length > 0;
+    private static boolean isValidAliases(ModuleDescription moduleDescriptionAnnotation, CommandDescription commandDescriptionAnnotation) {
+        return commandDescriptionAnnotation.aliases().length > 0
+            || moduleDescriptionAnnotation != null
+            && moduleDescriptionAnnotation.groups().length > 0;
     }
 
     @SuppressWarnings("unchecked")
