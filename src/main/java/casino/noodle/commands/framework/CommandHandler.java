@@ -5,13 +5,13 @@ import casino.noodle.commands.framework.mapping.CommandSearchResult;
 import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
+import casino.noodle.commands.framework.parsers.CharTypeParser;
+import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import discord4j.core.object.entity.Message;
-import org.springframework.context.ApplicationContext;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
@@ -20,6 +20,32 @@ import java.util.List;
 import java.util.Map;
 
 public class CommandHandler {
+    public static final ImmutableMap<Class<?>, PrimitiveTypeParser<?>> PRIMITIVE_TYPE_PARSERS = ImmutableMap.<Class<?>, PrimitiveTypeParser<?>>builder()
+        .put(boolean.class, new PrimitiveTypeParser<>(Boolean::parseBoolean, boolean.class))
+        .put(Boolean.class, new PrimitiveTypeParser<>(Boolean::parseBoolean, Boolean.class))
+
+        .put(byte.class, new PrimitiveTypeParser<>(Byte::parseByte, byte.class))
+        .put(Byte.class, new PrimitiveTypeParser<>(Byte::parseByte, Byte.class))
+
+        .put(char.class, new CharTypeParser())
+        .put(Character.class, new CharTypeParser())
+
+        .put(int.class, new PrimitiveTypeParser<>(Integer::parseInt, int.class))
+        .put(Integer.class, new PrimitiveTypeParser<>(Integer::parseInt, Integer.class))
+
+        .put(short.class, new PrimitiveTypeParser<>(Short::parseShort, short.class))
+        .put(Short.class, new PrimitiveTypeParser<>(Short::parseShort, Short.class))
+
+        .put(float.class, new PrimitiveTypeParser<>(Float::parseFloat, float.class))
+        .put(Float.class, new PrimitiveTypeParser<>(Float::parseFloat, Float.class))
+
+        .put(long.class, new PrimitiveTypeParser<>(Long::parseLong, long.class))
+        .put(Long.class, new PrimitiveTypeParser<>(Long::parseLong, Long.class))
+
+        .put(double.class, new PrimitiveTypeParser<>(Double::parseDouble, double.class))
+        .put(Double.class, new PrimitiveTypeParser<>(Double::parseDouble, Double.class))
+        .build();
+
     private final ImmutableMap<Class<?>, TypeParser<?>> typeParserByClass;
     private final CommandMap commandMap;
     private final PrefixProvider prefixProvider;
@@ -40,8 +66,11 @@ public class CommandHandler {
         return new Builder();
     }
 
-    public Mono<Result> executeAsync(Message message, ApplicationContext applicationContext) {
-        ImmutableList<CommandSearchResult> commands = commandMap.findCommands(message.getContent());
+    public Mono<Result> executeAsync(String input, CommandContext context) {
+        ImmutableList<CommandSearchResult> commands = commandMap.findCommands(input);
+
+
+
         return Mono.empty();
     }
 
@@ -54,7 +83,7 @@ public class CommandHandler {
         private BeanProvider beanProvider;
 
         public Builder() {
-            this.typeParserByClass = new HashMap<>();
+            this.typeParserByClass = new HashMap<>(PRIMITIVE_TYPE_PARSERS);
             this.commandMap = CommandMap.builder();
             this.commandModules = new ArrayList<>();
             this.beanProvider = BeanProvider.EmptyBeanProvider.INSTANCE;

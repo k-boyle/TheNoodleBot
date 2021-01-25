@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// todo preconditions
 public class CommandModuleFactoryTests {
     @Test
     public void testCorrectModuleAndCommandIsCreated() {

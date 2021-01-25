@@ -14,6 +14,7 @@ public record Command(
         String description, //todo optional
         CommandCallback commandCallback,
         ImmutableList<CommandParameter> parameters,
+        ImmutableList<CommandPrecondition> preconditions,
         Signature signature) {
     static Builder builder() {
         return new Builder();
@@ -22,6 +23,7 @@ public record Command(
     static class Builder {
         private final ImmutableSet.Builder<String> aliases;
         private final ImmutableList.Builder<CommandParameter> parameters;
+        private final ImmutableList.Builder<CommandPrecondition> preconditions;
 
         private String description;
         private CommandCallback commandCallback;
@@ -29,6 +31,7 @@ public record Command(
         private Builder() {
             this.aliases = ImmutableSet.builder();
             this.parameters = ImmutableList.builder();
+            this.preconditions = ImmutableList.builder();
         }
 
         public Builder withAliases(String... aliases) {
@@ -48,6 +51,11 @@ public record Command(
 
         public Builder withParameter(CommandParameter commandParameter) {
             this.parameters.add(commandParameter);
+            return this;
+        }
+
+        public Builder withPrecondition(CommandPrecondition precondition) {
+            this.preconditions.add(precondition);
             return this;
         }
 
@@ -78,6 +86,7 @@ public record Command(
                 this.description,
                 this.commandCallback,
                 parameters,
+                this.preconditions.build(),
                 commandSignature);
         }
     }
