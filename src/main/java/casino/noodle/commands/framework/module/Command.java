@@ -1,8 +1,10 @@
 package casino.noodle.commands.framework.module;
 
+import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import reactor.core.publisher.Mono;
 
 import java.util.stream.Collectors;
 
@@ -14,16 +16,23 @@ public record Command(
         String description, //todo optional
         CommandCallback commandCallback,
         ImmutableList<CommandParameter> parameters,
-        ImmutableList<CommandPrecondition> preconditions,
-        Signature signature) {
+        ImmutableList<Precondition> preconditions,
+        Signature signature,
+        Module module) {
     static Builder builder() {
         return new Builder();
+    }
+
+    public Mono<Result> check() {
+        // todo
+        return module.check();
     }
 
     static class Builder {
         private final ImmutableSet.Builder<String> aliases;
         private final ImmutableList.Builder<CommandParameter> parameters;
-        private final ImmutableList.Builder<CommandPrecondition> preconditions;
+        private final ImmutableList.Builder<Precondition> preconditions;
+        private Module module;
 
         private String description;
         private CommandCallback commandCallback;
@@ -54,8 +63,13 @@ public record Command(
             return this;
         }
 
-        public Builder withPrecondition(CommandPrecondition precondition) {
+        public Builder withPrecondition(Precondition precondition) {
             this.preconditions.add(precondition);
+            return this;
+        }
+
+        public Builder withModule(Module module){
+            this.module = module;
             return this;
         }
 
@@ -87,7 +101,8 @@ public record Command(
                 this.commandCallback,
                 parameters,
                 this.preconditions.build(),
-                commandSignature);
+                commandSignature,
+                this.module);
         }
     }
 

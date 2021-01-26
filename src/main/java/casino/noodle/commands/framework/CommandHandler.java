@@ -2,22 +2,22 @@ package casino.noodle.commands.framework;
 
 import casino.noodle.commands.framework.mapping.CommandMap;
 import casino.noodle.commands.framework.mapping.CommandSearchResult;
+import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
 import casino.noodle.commands.framework.parsers.CharTypeParser;
 import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.parsers.TypeParser;
+import casino.noodle.commands.framework.results.CommandNotFoundResult;
+import casino.noodle.commands.framework.results.FailedResult;
 import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CommandHandler {
     public static final ImmutableMap<Class<?>, PrimitiveTypeParser<?>> PRIMITIVE_TYPE_PARSERS = ImmutableMap.<Class<?>, PrimitiveTypeParser<?>>builder()
@@ -67,9 +67,34 @@ public class CommandHandler {
     }
 
     public Mono<Result> executeAsync(String input, CommandContext context) {
+        Preconditions.checkNotNull(input);
+        Preconditions.checkNotNull(context);
+
         ImmutableList<CommandSearchResult> commands = commandMap.findCommands(input);
 
+        if (commands.isEmpty()) {
+            return Mono.just(CommandNotFoundResult.get());
+        }
 
+        int pathLength = commands.get(0).path().size();
+
+        Map<Command, FailedResult> failedOverloads = new HashMap<>();
+
+        // todo command errors "Too many/few args"
+        //(Command command, ImmutableList<String> path, String alias, String[] remainingArguments)
+        for (CommandSearchResult searchResult : commands) {
+            if (searchResult.path().size() < pathLength) {
+                continue;
+            }
+
+            //todo run checks
+        }
+
+
+        // Number of args
+        // remainder
+        // parsed Args
+        // preconditions
 
         return Mono.empty();
     }
@@ -86,7 +111,7 @@ public class CommandHandler {
             this.typeParserByClass = new HashMap<>(PRIMITIVE_TYPE_PARSERS);
             this.commandMap = CommandMap.builder();
             this.commandModules = new ArrayList<>();
-            this.beanProvider = BeanProvider.EmptyBeanProvider.INSTANCE;
+            this.beanProvider = BeanProvider.get();
         }
 
         public <T> Builder withTypeParser(Class<T> clazz, TypeParser<T> parser) {

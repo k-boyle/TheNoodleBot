@@ -2,10 +2,8 @@ package casino.noodle.commands.framework;
 
 @FunctionalInterface
 public interface BeanProvider {
-    <T> T getBean(Class<T> clazz);
-
-    class EmptyBeanProvider implements BeanProvider {
-        public static final BeanProvider INSTANCE = new EmptyBeanProvider();
+     class EmptyBeanProvider implements BeanProvider {
+        private static final BeanProvider INSTANCE = new EmptyBeanProvider();
 
         private EmptyBeanProvider() {
         }
@@ -15,4 +13,10 @@ public interface BeanProvider {
             return null;
         }
     }
+
+    static BeanProvider get() {
+        return EmptyBeanProvider.INSTANCE;
+    }
+
+    <T> T getBean(Class<T> clazz);
 }

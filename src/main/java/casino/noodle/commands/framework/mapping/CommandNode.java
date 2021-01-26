@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 class CommandNode {
-    private static final String EMPTY_STRING = "";
 
     private final ImmutableMap<String, List<Command>> commandsByAlias;
     private final ImmutableMap<String, CommandNode> nodeByAlias;
@@ -43,9 +42,8 @@ class CommandNode {
         List<Command> commands = commandsByAlias.get(segment);
         if (commands != null) {
             path.add(segment);
-            String remaining = toString(remainingInput);
             for (Command command : commands) {
-                results.add(new CommandSearchResult(command, ImmutableList.copyOf(path), segment, remaining));
+                results.add(new CommandSearchResult(command, ImmutableList.copyOf(path), segment, remainingInput));
             }
             path.remove(path.size() - 1);
         }
@@ -56,14 +54,6 @@ class CommandNode {
             commandNode.findCommands(results, path, remainingInput);
             path.remove(path.size() - 1);
         }
-    }
-
-    private String toString(String[] input) {
-        if (input.length == 0) {
-            return EMPTY_STRING;
-        }
-
-        return String.join(" ", input);
     }
 
     static Builder builder() {

@@ -54,9 +54,9 @@ public final class CommandModuleFactory {
                     .withDescription(commandDescriptionAnnotation.description())
                     .withCallback(createCommandCallback(clazz, method));
 
-                Class<? extends CommandPrecondition>[] preconditionClazzes = commandDescriptionAnnotation.preconditions();
-                for (Class<? extends CommandPrecondition> preconditionClazz : preconditionClazzes) {
-                    CommandPrecondition precondition = Preconditions.checkNotNull(
+                Class<? extends Precondition>[] preconditionClazzes = commandDescriptionAnnotation.preconditions();
+                for (Class<? extends Precondition> preconditionClazz : preconditionClazzes) {
+                    Precondition precondition = Preconditions.checkNotNull(
                         beanProvider.getBean(preconditionClazz),
                         "A precondition of type %s must be added to the bean provider",
                         preconditionClazz
@@ -64,7 +64,9 @@ public final class CommandModuleFactory {
                     commandBuilder.withPrecondition(precondition);
                 }
 
-                for (Parameter parameter : method.getParameters()) {
+                Parameter[] parameters = method.getParameters();
+                for (int i = 1; i < parameters.length; i++) {
+                    Parameter parameter = parameters[i];
                     Class<?> parameterType = parameter.getType();
                     CommandParameter.Builder cmdParameterBuilder = CommandParameter.builder()
                         .withType(parameterType)

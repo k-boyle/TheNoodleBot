@@ -8,10 +8,6 @@ public interface TypeParserResult<T> extends Result {
         }
     }
 
-    record Failure<T>(String reason) implements TypeParserResult<T> {
-        @Override
-        public boolean isSuccess() {
-            return false;
-        }
+    record Failure<T>(String reason) implements FailedResult, TypeParserResult<T> {
     }
 }

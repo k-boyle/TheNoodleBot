@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class CommandModuleFactoryTests {
     @Test
     public void testCorrectModuleAndCommandIsCreated() {
-        Module module = CommandModuleFactory.create(TestModuleOne.class, BeanProvider.EmptyBeanProvider.INSTANCE);
+        Module module = CommandModuleFactory.create(TestModuleOne.class, BeanProvider.get());
 
         assertEquals(ImmutableSet.of("group1", "group2"), module.groups());
         assertEquals("This is a test module", module.description());
@@ -39,7 +39,7 @@ public class CommandModuleFactoryTests {
 
     @Test
     public void testCorrectModuleAndGroupCommandIsCreated() {
-        Module module = CommandModuleFactory.create(TestModuleTwo.class, BeanProvider.EmptyBeanProvider.INSTANCE);
+        Module module = CommandModuleFactory.create(TestModuleTwo.class, BeanProvider.get());
 
         assertEquals(ImmutableSet.of("group1", "group2"), module.groups());
         assertEquals(1, module.commands().size());
@@ -51,7 +51,7 @@ public class CommandModuleFactoryTests {
 
     @Test
     public void testCorrectDescriptionlessModuleAndCommandIsCreated() {
-        Module module = CommandModuleFactory.create(TestModuleThree.class, BeanProvider.EmptyBeanProvider.INSTANCE);
+        Module module = CommandModuleFactory.create(TestModuleThree.class, BeanProvider.get());
 
         assertEquals(ImmutableSet.of(), module.groups());
         assertNull(module.description());
@@ -65,43 +65,37 @@ public class CommandModuleFactoryTests {
 
     @Test
     public void testCorrectParameterDetailsAppliedCorrectly() {
-        Module module = CommandModuleFactory.create(TestModuleEight.class, BeanProvider.EmptyBeanProvider.INSTANCE);
+        Module module = CommandModuleFactory.create(TestModuleEight.class, BeanProvider.get());
 
         assertEquals(1, module.commands().size());
 
         ImmutableList<CommandParameter> parameters = module.commands().get(0).parameters();
 
-        assertEquals(3, parameters.size());
+        assertEquals(2, parameters.size());
 
         CommandParameter param1 = parameters.get(0);
-        assertEquals(CommandContext.class, param1.type());
-        assertEquals("context", param1.name());
+        assertEquals(int.class, param1.type());
+        assertEquals("temp", param1.name());
         assertNull(param1.description());
         assertFalse(param1.remainder());
 
         CommandParameter param2 = parameters.get(1);
-        assertEquals(int.class, param2.type());
-        assertEquals("temp", param2.name());
-        assertNull(param2.description());
-        assertFalse(param2.remainder());
-
-        CommandParameter param3 = parameters.get(2);
-        assertEquals(String.class, param3.type());
-        assertEquals("input", param3.name());
-        assertEquals("remaining inputs", param3.description());
-        assertTrue(param3.remainder());
+        assertEquals(String.class, param2.type());
+        assertEquals("input", param2.name());
+        assertEquals("remaining inputs", param2.description());
+        assertTrue(param2.remainder());
     }
 
     @Test
     public void testTwoCommandsAreCreated() {
-        Module module = CommandModuleFactory.create(TestModuleThirteen.class, BeanProvider.EmptyBeanProvider.INSTANCE);
+        Module module = CommandModuleFactory.create(TestModuleThirteen.class, BeanProvider.get());
         assertEquals(2, module.commands().size());
     }
 
     @ParameterizedTest
     @MethodSource("testInvalidCommandSignatureSource")
     public void testInvalidCommandSignature(Class<? extends CommandModuleBase> moduleClazz) {
-        assertThrows(IllegalStateException.class, () -> CommandModuleFactory.create(moduleClazz, BeanProvider.EmptyBeanProvider.INSTANCE));
+        assertThrows(IllegalStateException.class, () -> CommandModuleFactory.create(moduleClazz, BeanProvider.get()));
     }
 
     // Groups with commands

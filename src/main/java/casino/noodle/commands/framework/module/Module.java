@@ -1,7 +1,9 @@
 package casino.noodle.commands.framework.module;
 
+import casino.noodle.commands.framework.results.Result;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import reactor.core.publisher.Mono;
 
 public record Module(
         ImmutableSet<String> groups,
@@ -9,6 +11,10 @@ public record Module(
         String description) {
     static Builder builder() {
         return new Builder();
+    }
+
+    public Mono<Result> check() {
+        return Mono.empty();
     }
 
     static class Builder {

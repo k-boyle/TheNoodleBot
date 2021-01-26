@@ -4,6 +4,6 @@ import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.results.PreconditionResult;
 import reactor.core.publisher.Mono;
 
-public interface CommandPrecondition {
+public interface Precondition {
     Mono<PreconditionResult> check(CommandContext context);
 }
