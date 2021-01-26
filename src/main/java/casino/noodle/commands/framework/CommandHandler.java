@@ -11,13 +11,17 @@ import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.CommandNotFoundResult;
 import casino.noodle.commands.framework.results.FailedResult;
+import casino.noodle.commands.framework.results.PreconditionResult;
 import casino.noodle.commands.framework.results.Result;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class CommandHandler {
     public static final ImmutableMap<Class<?>, PrimitiveTypeParser<?>> PRIMITIVE_TYPE_PARSERS = ImmutableMap.<Class<?>, PrimitiveTypeParser<?>>builder()
@@ -70,24 +74,32 @@ public class CommandHandler {
         Preconditions.checkNotNull(input);
         Preconditions.checkNotNull(context);
 
-        ImmutableList<CommandSearchResult> commands = commandMap.findCommands(input);
+        ImmutableList<CommandSearchResult> searchResults = commandMap.findCommands(input);
 
-        if (commands.isEmpty()) {
+        if (searchResults.isEmpty()) {
             return Mono.just(CommandNotFoundResult.get());
         }
 
-        int pathLength = commands.get(0).path().size();
+        int pathLength = searchResults.get(0).path().size();
 
+        // command can't be a key
         Map<Command, FailedResult> failedOverloads = new HashMap<>();
 
         // todo command errors "Too many/few args"
-        //(Command command, ImmutableList<String> path, String alias, String[] remainingArguments)
-        for (CommandSearchResult searchResult : commands) {
+        for (CommandSearchResult searchResult : searchResults) {
             if (searchResult.path().size() < pathLength) {
                 continue;
             }
 
-            //todo run checks
+            Command command = searchResult.command();
+            PreconditionResult preconditionResult = command.check(context);
+
+            if (preconditionResult instanceof FailedResult failedResult) {
+                failedOverloads.put(command, failedResult);
+                continue;
+            }
+
+
         }
 
 

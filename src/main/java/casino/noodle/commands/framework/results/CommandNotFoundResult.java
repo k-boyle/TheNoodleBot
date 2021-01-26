@@ -14,6 +14,6 @@ public class CommandNotFoundResult implements FailedResult {
 
     @Override
     public String reason() {
-        return "Command Not Found";
+        return "Command not found";
     }
 }

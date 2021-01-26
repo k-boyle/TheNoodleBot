@@ -1,10 +1,11 @@
 package casino.noodle.commands.framework.module;
 
-import casino.noodle.commands.framework.results.Result;
+import casino.noodle.commands.framework.CommandContext;
+import casino.noodle.commands.framework.results.PreconditionResult;
+import casino.noodle.commands.framework.results.PreconditionsFailedResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import reactor.core.publisher.Mono;
 
 import java.util.stream.Collectors;
 
@@ -23,17 +24,39 @@ public record Command(
         return new Builder();
     }
 
-    public Mono<Result> check() {
-        // todo
-        return module.check();
+    public PreconditionResult check(CommandContext context) {
+        PreconditionResult moduleResult = module.check(context);
+
+        if (!moduleResult.isSuccess()) {
+            return moduleResult;
+        }
+
+        if (preconditions.isEmpty()) {
+            return PreconditionResult.Success.get();
+        }
+
+        ImmutableList.Builder<PreconditionResult.Failure> failedResults = ImmutableList.builder();
+        boolean failedResult = false;
+
+        for (Precondition precondition : preconditions) {
+            PreconditionResult result = precondition.check(context);
+            if (result instanceof PreconditionResult.Failure failed) {
+                failedResults.add(failed);
+                failedResult = true;
+            }
+        }
+
+        return failedResult
+            ? new PreconditionsFailedResult(failedResults.build())
+            : PreconditionResult.Success.get();
     }
 
     static class Builder {
         private final ImmutableSet.Builder<String> aliases;
         private final ImmutableList.Builder<CommandParameter> parameters;
         private final ImmutableList.Builder<Precondition> preconditions;
-        private Module module;
 
+        private Module module;
         private String description;
         private CommandCallback commandCallback;
 
@@ -75,6 +98,7 @@ public record Command(
 
         public Command build() {
             Preconditions.checkNotNull(commandCallback, "A command callback must be specified");
+            Preconditions.checkNotNull(module, "A module must be assigned to this command");
 
             ImmutableList<CommandParameter> parameters = this.parameters.build();
             for (int i = 0; i < parameters.size(); i++) {

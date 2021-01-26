@@ -33,6 +33,16 @@ public final class CommandModuleFactory {
             moduleBuilder
                 .withGroups(moduleDescriptionAnnotation.groups())
                 .withDescription(moduleDescriptionAnnotation.description());
+
+            Class<? extends Precondition>[] preconditionClazzes = moduleDescriptionAnnotation.preconditions();
+            for (Class<? extends Precondition> preconditionClazz : preconditionClazzes) {
+                Precondition precondition = Preconditions.checkNotNull(
+                    beanProvider.getBean(preconditionClazz),
+                    "A precondition of type %s must be added to the bean provider",
+                    preconditionClazz
+                );
+                moduleBuilder.withPrecondition(precondition);
+            }
         }
 
         Method[] methods = clazz.getMethods();
@@ -83,7 +93,7 @@ public final class CommandModuleFactory {
                     commandBuilder.withParameter(cmdParameterBuilder.build());
                 }
 
-                moduleBuilder.withCommand(commandBuilder.build());
+                moduleBuilder.withCommand(commandBuilder);
             }
         }
 
