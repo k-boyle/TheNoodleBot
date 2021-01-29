@@ -2,6 +2,7 @@ package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.CommandContext;
+import casino.noodle.commands.framework.exceptions.MissingBeanException;
 import casino.noodle.commands.framework.module.annotations.CommandDescription;
 import casino.noodle.commands.framework.module.annotations.ModuleDescription;
 import casino.noodle.commands.framework.module.annotations.ParameterDescription;
@@ -11,12 +12,11 @@ import com.google.common.base.Strings;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Arrays;
+import java.util.function.Supplier;
 
 public final class CommandModuleFactory {
     private static final String SPACE = " ";
@@ -66,9 +66,10 @@ public final class CommandModuleFactory {
                     "A command must have aliases if the module has no groups"
                 );
 
+                Supplier<Object> moduleConstructor = createModuleConstructor(clazz, beanProvider);
                 Command.Builder commandBuilder = Command.builder()
                     .withName(method.getName())
-                    .withCallback(createCommandCallback(clazz, method));
+                    .withCallback(createCommandCallback(moduleConstructor, method));
 
                 for (String alias : commandDescriptionAnnotation.aliases()) {
                     commandBuilder.withAliases(alias);
@@ -144,24 +145,58 @@ public final class CommandModuleFactory {
             && moduleDescriptionAnnotation.groups().length > 0;
     }
 
+    private static Supplier<Object> createModuleConstructor(Class<?> moduleClass, BeanProvider beanProvider) {
+        Constructor<?>[] constructors = moduleClass.getConstructors();
+        Preconditions.checkState(constructors.length > 0, "Public constructor for module %s", moduleClass);
+        Constructor<?> reflectedConstructor = constructors[0];
+        Class<?>[] parameterTypes = reflectedConstructor.getParameterTypes();
+        try {
+            return () -> {
+                try {
+                    if (parameterTypes.length == 0) {
+                        return reflectedConstructor.newInstance();
+                    }
+
+                    Object[] beans = new Object[parameterTypes.length];
+                    for (int i = 0; i < parameterTypes.length; i++) {
+                        Class<?> parameterType = parameterTypes[i];
+                        Object bean = beanProvider.getBean(parameterType);
+                        if (bean == null) {
+                            throw new MissingBeanException(parameterType);
+                        }
+
+                        beans[i] = bean;
+                    }
+                    return reflectedConstructor.newInstance(beans);
+                } catch (Throwable throwable) {
+                    throw new RuntimeException(throwable);
+                }
+            };
+        } catch (Exception exception) {
+            throw new RuntimeException(exception);
+        }
+    }
+
     @SuppressWarnings("unchecked")
-    private static CommandCallback createCommandCallback(Class<?> moduleClass, Method method) {
-        return (commandContext, parameters) -> {
-            try {
-                // todo method handles
-                BeanProvider applicationContext = commandContext.beanProvider();
-                Constructor<?> constructor = moduleClass.getConstructors()[0];
-                Object[] constructorArguments = Arrays.stream(constructor.getParameterTypes())
-                    .map(applicationContext::getBean)
-                    .toArray();
-                Object module = constructor.newInstance(constructorArguments);
-                Object[] parametersWithContext = new Object[1 + parameters.length];
-                parametersWithContext[0] = commandContext;
-                System.arraycopy(parameters, 0, parametersWithContext, 1, parameters.length);
-                return (Mono<CommandResult>) method.invoke(module, parametersWithContext);
-            } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                return Mono.error(e);
-            }
-        };
+    private static CommandCallback createCommandCallback(Supplier<Object> moduleConstructor, Method reflectedMethod) {
+        try {
+            return (commandContext, parameters) -> {
+                try {
+                    Object module = moduleConstructor.get();
+                    if (parameters.length > 0) {
+                        Object[] temp = new Object[parameters.length + 1];
+                        temp[0] = commandContext;
+                        System.arraycopy(parameters, 0, temp, 1, parameters.length);
+                        return (Mono<CommandResult>) reflectedMethod.invoke(module, temp);
+                    }
+
+                    return (Mono<CommandResult>) reflectedMethod.invoke(module, commandContext);
+                } catch (Throwable throwable) {
+                    return Mono.error(throwable);
+                }
+            };
+        } catch (Exception exception) {
+            throw new RuntimeException(exception);
+        }
     }
 }

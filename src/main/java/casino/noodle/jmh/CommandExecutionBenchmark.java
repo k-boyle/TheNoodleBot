@@ -46,6 +46,11 @@ public class CommandExecutionBenchmark {
         return commandHandler.executeAsync("c abc def ghi", context);
     }
 
+    @Benchmark
+    public Mono<Result> commandNotFound() {
+        return commandHandler.executeAsync("notfound", context);
+    }
+
     public static class BenchmarkModule extends CommandModuleBase {
         @CommandDescription(aliases = "a")
         public Mono<CommandResult> a(CommandContext context) {
