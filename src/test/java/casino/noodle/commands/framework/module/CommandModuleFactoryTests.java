@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // todo preconditions
+// todo command signature
 public class CommandModuleFactoryTests {
     @Test
     public void testCorrectModuleAndCommandIsCreated() {

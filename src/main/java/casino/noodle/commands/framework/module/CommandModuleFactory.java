@@ -7,6 +7,7 @@ import casino.noodle.commands.framework.module.annotations.ModuleDescription;
 import casino.noodle.commands.framework.module.annotations.ParameterDescription;
 import casino.noodle.commands.framework.results.CommandResult;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
@@ -24,15 +25,21 @@ public final class CommandModuleFactory {
     }
 
     public static <T extends CommandModuleBase> Module create(Class<T> clazz, BeanProvider beanProvider) {
-        Module.Builder moduleBuilder = Module.builder();
+        Module.Builder moduleBuilder = Module.builder()
+            .withName(clazz.getSimpleName());
         ModuleDescription moduleDescriptionAnnotation = clazz.getAnnotation(ModuleDescription.class);
         if (moduleDescriptionAnnotation != null) {
-            for (String group : moduleDescriptionAnnotation.groups()) {
-                Preconditions.checkState(!group.contains(SPACE), "Group %s contains a space", group);
+            if (!Strings.isNullOrEmpty(moduleDescriptionAnnotation.name())) {
+                moduleBuilder.withName(moduleDescriptionAnnotation.name());
             }
-            moduleBuilder
-                .withGroups(moduleDescriptionAnnotation.groups())
-                .withDescription(moduleDescriptionAnnotation.description());
+
+            if (!Strings.isNullOrEmpty(moduleDescriptionAnnotation.description())) {
+                moduleBuilder.withDescription(moduleDescriptionAnnotation.description());
+            }
+
+            for (String group : moduleDescriptionAnnotation.groups()) {
+               moduleBuilder.withGroup(group);
+            }
 
             Class<? extends Precondition>[] preconditionClazzes = moduleDescriptionAnnotation.preconditions();
             for (Class<? extends Precondition> preconditionClazz : preconditionClazzes) {
@@ -60,9 +67,20 @@ public final class CommandModuleFactory {
                 );
 
                 Command.Builder commandBuilder = Command.builder()
-                    .withAliases(commandDescriptionAnnotation.aliases())
-                    .withDescription(commandDescriptionAnnotation.description())
+                    .withName(method.getName())
                     .withCallback(createCommandCallback(clazz, method));
+
+                for (String alias : commandDescriptionAnnotation.aliases()) {
+                    commandBuilder.withAliases(alias);
+                }
+
+                if (!Strings.isNullOrEmpty(commandDescriptionAnnotation.name())) {
+                    commandBuilder.withName(commandDescriptionAnnotation.name());
+                }
+
+                if (!Strings.isNullOrEmpty(commandDescriptionAnnotation.description())) {
+                    commandBuilder.withDescription(commandDescriptionAnnotation.description());
+                }
 
                 Class<? extends Precondition>[] preconditionClazzes = commandDescriptionAnnotation.preconditions();
                 for (Class<? extends Precondition> preconditionClazz : preconditionClazzes) {
@@ -131,7 +149,7 @@ public final class CommandModuleFactory {
         return (commandContext, parameters) -> {
             try {
                 // todo method handles
-                BeanProvider applicationContext = commandContext.getBeanProvider();
+                BeanProvider applicationContext = commandContext.beanProvider();
                 Constructor<?> constructor = moduleClass.getConstructors()[0];
                 Object[] constructorArguments = Arrays.stream(constructor.getParameterTypes())
                     .map(applicationContext::getBean)

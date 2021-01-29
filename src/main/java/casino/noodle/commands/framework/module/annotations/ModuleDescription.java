@@ -10,6 +10,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface ModuleDescription {
+    String name() default "";
     String[] groups() default {};
     String description() default "";
     Class<? extends Precondition>[] preconditions() default {};

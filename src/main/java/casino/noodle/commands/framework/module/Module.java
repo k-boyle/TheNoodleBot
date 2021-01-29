@@ -3,26 +3,31 @@ package casino.noodle.commands.framework.module;
 import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.results.PreconditionResult;
 import casino.noodle.commands.framework.results.PreconditionsFailedResult;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class Module {
+    private final String name;
     private final ImmutableSet<String> groups;
     private final ImmutableList<Command> commands;
     private final ImmutableList<Precondition> preconditions;
-    private final String description;
+    private final Optional<String> description;
 
     private Module(
-            ImmutableSet<String> groups,
+            String name, ImmutableSet<String> groups,
             List<Command.Builder> commands,
             ImmutableList<Precondition> preconditions,
-            String description) {
+            Optional<String> description) {
+        this.name = name;
         this.groups = groups;
         this.commands = commands.stream()
-            .map(command -> command.withModule(this).build())
+            .map(command -> command.build(this))
             .collect(ImmutableList.toImmutableList());
         this.preconditions = preconditions;
         this.description = description;
@@ -32,7 +37,7 @@ public class Module {
         return new Builder();
     }
 
-    public PreconditionResult check(CommandContext context) {
+    PreconditionResult runPreconditions(CommandContext context, Command command) {
         if (preconditions.isEmpty()) {
             return PreconditionResult.Success.get();
         }
@@ -41,7 +46,7 @@ public class Module {
         boolean failedResult = false;
 
         for (Precondition precondition : preconditions) {
-            PreconditionResult result = precondition.check(context);
+            PreconditionResult result = precondition.run(context, command);
             if (result instanceof PreconditionResult.Failure failed) {
                 failedResults.add(failed);
                 failedResult = true;
@@ -53,6 +58,10 @@ public class Module {
             : PreconditionResult.Success.get();
     }
 
+    public String name() {
+        return name;
+    }
+
     public ImmutableSet<String> groups() {
         return groups;
     }
@@ -61,15 +70,18 @@ public class Module {
         return commands;
     }
 
-    public String description() {
+    public Optional<String> description() {
         return description;
     }
 
-    static class Builder {
+    public static class Builder {
+        private static final String SPACE = " ";
+
         private final ImmutableSet.Builder<String> groups;
         private final List<Command.Builder> commands;
         private final ImmutableList.Builder<Precondition> preconditions;
 
+        private String name;
         private String description;
 
         private Builder() {
@@ -78,8 +90,14 @@ public class Module {
             this.preconditions = ImmutableList.builder();
         }
 
-        public Builder withGroups(String... groups) {
-            this.groups.add(groups);
+        public Builder withName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder withGroup(String group) {
+            Preconditions.checkState(!group.contains(SPACE), "Group %s contains a space", group);
+            this.groups.add(group);
             return this;
         }
 
@@ -99,11 +117,14 @@ public class Module {
         }
 
         public Module build() {
+            Preconditions.checkNotNull(this.name, "A module name must be specified");
+
             return new Module(
+                this.name,
                 this.groups.build(),
                 this.commands,
                 this.preconditions.build(),
-                this.description
+                Optional.ofNullable(this.description)
             );
         }
     }

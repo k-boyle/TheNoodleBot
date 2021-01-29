@@ -6,10 +6,12 @@ import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
-import casino.noodle.commands.framework.parsers.CharTypeParser;
 import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.parsers.TypeParser;
+import casino.noodle.commands.framework.results.ArgumentParserResult;
+import casino.noodle.commands.framework.results.CommandMatchFailedResult;
 import casino.noodle.commands.framework.results.CommandNotFoundResult;
+import casino.noodle.commands.framework.results.ExecutionErrorResult;
 import casino.noodle.commands.framework.results.FailedResult;
 import casino.noodle.commands.framework.results.PreconditionResult;
 import casino.noodle.commands.framework.results.Result;
@@ -24,46 +26,13 @@ import java.util.List;
 import java.util.Map;
 
 public class CommandHandler {
-    public static final ImmutableMap<Class<?>, PrimitiveTypeParser<?>> PRIMITIVE_TYPE_PARSERS = ImmutableMap.<Class<?>, PrimitiveTypeParser<?>>builder()
-        .put(boolean.class, new PrimitiveTypeParser<>(Boolean::parseBoolean, boolean.class))
-        .put(Boolean.class, new PrimitiveTypeParser<>(Boolean::parseBoolean, Boolean.class))
-
-        .put(byte.class, new PrimitiveTypeParser<>(Byte::parseByte, byte.class))
-        .put(Byte.class, new PrimitiveTypeParser<>(Byte::parseByte, Byte.class))
-
-        .put(char.class, new CharTypeParser())
-        .put(Character.class, new CharTypeParser())
-
-        .put(int.class, new PrimitiveTypeParser<>(Integer::parseInt, int.class))
-        .put(Integer.class, new PrimitiveTypeParser<>(Integer::parseInt, Integer.class))
-
-        .put(short.class, new PrimitiveTypeParser<>(Short::parseShort, short.class))
-        .put(Short.class, new PrimitiveTypeParser<>(Short::parseShort, Short.class))
-
-        .put(float.class, new PrimitiveTypeParser<>(Float::parseFloat, float.class))
-        .put(Float.class, new PrimitiveTypeParser<>(Float::parseFloat, Float.class))
-
-        .put(long.class, new PrimitiveTypeParser<>(Long::parseLong, long.class))
-        .put(Long.class, new PrimitiveTypeParser<>(Long::parseLong, Long.class))
-
-        .put(double.class, new PrimitiveTypeParser<>(Double::parseDouble, double.class))
-        .put(Double.class, new PrimitiveTypeParser<>(Double::parseDouble, Double.class))
-        .build();
-
-    private final ImmutableMap<Class<?>, TypeParser<?>> typeParserByClass;
     private final CommandMap commandMap;
-    private final PrefixProvider prefixProvider;
-    private final BeanProvider beanProvider;
+    private final ArgumentParser argumentParser;
 
-    private CommandHandler(
-            Map<Class<?>, TypeParser<?>> typeParserByClass,
-            CommandMap commandMapper,
-            PrefixProvider prefixProvider,
-            BeanProvider beanProvider) {
-        this.typeParserByClass = ImmutableMap.copyOf(typeParserByClass);
+    private CommandHandler(Map<Class<?>, TypeParser<?>> typeParserByClass, CommandMap commandMapper) {
         this.commandMap = commandMapper;
-        this.prefixProvider = prefixProvider;
-        this.beanProvider = beanProvider;
+        // todo potentially abstract out
+        this.argumentParser = new ArgumentParser(ImmutableMap.copyOf(typeParserByClass));
     }
 
     public static Builder builder() {
@@ -82,33 +51,57 @@ public class CommandHandler {
 
         int pathLength = searchResults.get(0).path().size();
 
-        // command can't be a key
-        Map<Command, FailedResult> failedOverloads = new HashMap<>();
+        ImmutableList.Builder<FailedResult> failedResults = null;
 
-        // todo command errors "Too many/few args"
         for (CommandSearchResult searchResult : searchResults) {
             if (searchResult.path().size() < pathLength) {
                 continue;
             }
 
             Command command = searchResult.command();
-            PreconditionResult preconditionResult = command.check(context);
 
-            if (preconditionResult instanceof FailedResult failedResult) {
-                failedOverloads.put(command, failedResult);
+            try {
+                PreconditionResult preconditionResult = command.runPreconditions(context);
+                if (preconditionResult instanceof FailedResult failedResult) {
+                    if (searchResults.size() == 1) {
+                        return Mono.just(failedResult);
+                    }
+
+                    if (failedResults == null) {
+                        failedResults = ImmutableList.builder();
+                    }
+                    failedResults.add(failedResult);
+                    continue;
+                }
+            } catch (Exception ex) {
+                return Mono.just(new ExecutionErrorResult(command, ex));
+            }
+
+            ArgumentParserResult argumentParserResult = argumentParser.parse(
+                context,
+                searchResult.command(),
+                searchResult.remainingArguments()
+            );
+
+            if (argumentParserResult instanceof FailedResult failedResult) {
+                if (searchResults.size() == 1) {
+                    return Mono.just(failedResult);
+                }
+
+                if (failedResults == null) {
+                    failedResults = ImmutableList.builder();
+                }
+                failedResults.add(failedResult);
                 continue;
             }
 
+            ArgumentParserResult.Success success = (ArgumentParserResult.Success) argumentParserResult;
 
+            return command.commandCallback().execute(context, success.parsedArguments()).cast(Result.class);
         }
 
-
-        // Number of args
-        // remainder
-        // parsed Args
-        // preconditions
-
-        return Mono.empty();
+        assert failedResults != null;
+        return Mono.just(new CommandMatchFailedResult(failedResults.build()));
     }
 
     public static class Builder {
@@ -116,11 +109,10 @@ public class CommandHandler {
         private final CommandMap.Builder commandMap;
         private final List<Class<? extends CommandModuleBase>> commandModules;
 
-        private PrefixProvider prefixProvider;
         private BeanProvider beanProvider;
 
-        public Builder() {
-            this.typeParserByClass = new HashMap<>(PRIMITIVE_TYPE_PARSERS);
+        private Builder() {
+            this.typeParserByClass = new HashMap<>(PrimitiveTypeParser.DEFAULT_PARSERS);
             this.commandMap = CommandMap.builder();
             this.commandModules = new ArrayList<>();
             this.beanProvider = BeanProvider.get();
@@ -136,24 +128,18 @@ public class CommandHandler {
             return this;
         }
 
-        public Builder withPrefixProvider(PrefixProvider prefixProvider) {
-            this.prefixProvider = prefixProvider;
-            return this;
-        }
-
         public Builder withBeanProvider(BeanProvider beanProvider) {
             this.beanProvider = beanProvider;
             return this;
         }
 
         public CommandHandler build() {
-            Preconditions.checkNotNull(this.prefixProvider, "A PrefixProvider must be specified");
             for (Class<? extends CommandModuleBase> moduleClazz : commandModules) {
                 Module module = CommandModuleFactory.create(moduleClazz, this.beanProvider);
                 this.commandMap.map(module);
             }
 
-            return new CommandHandler(this.typeParserByClass, this.commandMap.build(), this.prefixProvider, this.beanProvider);
+            return new CommandHandler(this.typeParserByClass, this.commandMap.build());
         }
     }
 }

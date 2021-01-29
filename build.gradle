@@ -15,6 +15,7 @@ allprojects {
 
 compileJava {
     options.compilerArgs += '-parameters'
+    options.compilerArgs += '--enable-preview'
 }
 
 tasks.withType(JavaCompile).all {
@@ -38,10 +39,9 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.7.0'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-}
 
-compileJava {
-    options.compilerArgs += ['--enable-preview']
+    implementation 'org.openjdk.jmh:jmh-core:1.19'
+    annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.19'
 }
 
 test {

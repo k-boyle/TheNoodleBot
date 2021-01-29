@@ -6,12 +6,12 @@ import com.google.common.eventbus.EventBus;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.Event;
-import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
-@SpringBootConfiguration
+@Configuration
 public class NoodleBotConfiguration {
     private static final String NOODLE_BUS = "Noodle Bus";
 

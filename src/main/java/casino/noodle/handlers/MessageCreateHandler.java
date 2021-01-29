@@ -4,6 +4,7 @@ import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.CommandHandler;
 import casino.noodle.commands.framework.results.CommandMessageResult;
+import casino.noodle.commands.framework.results.FailedResult;
 import casino.noodle.configurations.CommandConfiguration;
 import com.google.common.eventbus.Subscribe;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -35,8 +36,13 @@ public class MessageCreateHandler implements Handler<MessageCreateEvent> {
 
         CommandContext context = new CommandContext(beanProvider, message);
         commandHandler.executeAsync(message.getContent(), context).flatMap(result -> {
-            CommandMessageResult messageResult = (CommandMessageResult) result;
-            return message.getChannel().flatMap(channel -> channel.createMessage(messageResult.getMessage()));
+            if (result instanceof FailedResult failed) {
+                return message.getChannel().flatMap(channel -> channel.createMessage(failed.reason()));
+            } else if (result instanceof CommandMessageResult messageResult) {
+                return message.getChannel().flatMap(channel -> channel.createMessage(messageResult.getMessage()));
+            }
+
+            return message.getChannel().flatMap(channel -> channel.createMessage(result.getClass().toString()));
         }).subscribe();
     }
 }

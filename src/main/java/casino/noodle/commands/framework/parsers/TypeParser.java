@@ -1,17 +1,18 @@
 package casino.noodle.commands.framework.parsers;
 
 import casino.noodle.commands.framework.CommandContext;
+import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.results.TypeParserResult;
-import reactor.core.publisher.Mono;
 
-public abstract class TypeParser<T> {
-    public abstract Mono<TypeParserResult<T>> parseAsync(CommandContext context, String input);
+@FunctionalInterface
+public interface TypeParser<T> {
+    TypeParserResult<T> parse(CommandContext context, Command command, String input);
 
-    protected Mono<TypeParserResult<T>> success(T value) {
-        return Mono.just(new TypeParserResult.Success<>(value));
+    default TypeParserResult<T> success(T value) {
+        return new TypeParserResult.Success<>(value);
     }
 
-    protected Mono<TypeParserResult<T>> failure(String reason, Object... args) {
-        return Mono.just(new TypeParserResult.Failure<>(String.format(reason, args)));
+    default TypeParserResult<T> failure(Command command, String reason, Object... args) {
+        return new TypeParserResult.Failure<>(command, String.format(reason, args));
     }
 }

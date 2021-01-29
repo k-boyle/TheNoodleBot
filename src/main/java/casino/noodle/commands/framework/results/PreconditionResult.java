@@ -1,5 +1,7 @@
 package casino.noodle.commands.framework.results;
 
+import casino.noodle.commands.framework.module.Command;
+
 public interface PreconditionResult extends Result {
     record Success() implements PreconditionResult {
         private static final Success INSTANCE = new Success();
@@ -14,6 +16,6 @@ public interface PreconditionResult extends Result {
         }
     }
 
-    record Failure(String reason) implements FailedResult, PreconditionResult {
+    record Failure(Command command, String reason) implements CommandFailedResult, PreconditionResult {
     }
 }

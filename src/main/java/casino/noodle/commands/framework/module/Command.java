@@ -7,25 +7,45 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-/* todo
-    - name (in build() Precondition too)
- */
-public record Command(
-        ImmutableSet<String> aliases,
-        String description, //todo optional
-        CommandCallback commandCallback,
-        ImmutableList<CommandParameter> parameters,
-        ImmutableList<Precondition> preconditions,
-        Signature signature,
-        Module module) {
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+public class Command {
+    private final String name;
+    private final ImmutableSet<String> aliases;
+    private final Optional<String> description;
+    private final CommandCallback commandCallback;
+    private final ImmutableList<CommandParameter> parameters;
+    private final ImmutableList<Precondition> preconditions;
+    private final Signature signature;
+    private final Module module;
+
+    public Command(
+            String name,
+            ImmutableSet<String> aliases,
+            Optional<String> description,
+            CommandCallback commandCallback,
+            ImmutableList<CommandParameter> parameters,
+            ImmutableList<Precondition> preconditions,
+            Signature signature,
+            Module module) {
+        this.name = name;
+        this.aliases = aliases;
+        this.description = description;
+        this.commandCallback = commandCallback;
+        this.parameters = parameters;
+        this.preconditions = preconditions;
+        this.signature = signature;
+        this.module = module;
+    }
+
     static Builder builder() {
         return new Builder();
     }
 
-    public PreconditionResult check(CommandContext context) {
-        PreconditionResult moduleResult = module.check(context);
+    public PreconditionResult runPreconditions(CommandContext context) {
+        PreconditionResult moduleResult = module.runPreconditions(context, this);
 
         if (!moduleResult.isSuccess()) {
             return moduleResult;
@@ -39,7 +59,7 @@ public record Command(
         boolean failedResult = false;
 
         for (Precondition precondition : preconditions) {
-            PreconditionResult result = precondition.check(context);
+            PreconditionResult result = precondition.run(context, this);
             if (result instanceof PreconditionResult.Failure failed) {
                 failedResults.add(failed);
                 failedResult = true;
@@ -51,12 +71,46 @@ public record Command(
             : PreconditionResult.Success.get();
     }
 
-    static class Builder {
+    public String name() {
+        return name;
+    }
+
+    public ImmutableSet<String> aliases() {
+        return aliases;
+    }
+
+    public Optional<String> description() {
+        return description;
+    }
+
+    public CommandCallback commandCallback() {
+        return commandCallback;
+    }
+
+    public ImmutableList<CommandParameter> parameters() {
+        return parameters;
+    }
+
+    public ImmutableList<Precondition> preconditions() {
+        return preconditions;
+    }
+
+    public Signature signature() {
+        return signature;
+    }
+
+    public Module module() {
+        return module;
+    }
+
+    public static class Builder {
+        private static final String SPACE = " ";
+
         private final ImmutableSet.Builder<String> aliases;
         private final ImmutableList.Builder<CommandParameter> parameters;
         private final ImmutableList.Builder<Precondition> preconditions;
 
-        private Module module;
+        private String name;
         private String description;
         private CommandCallback commandCallback;
 
@@ -66,8 +120,14 @@ public record Command(
             this.preconditions = ImmutableList.builder();
         }
 
-        public Builder withAliases(String... aliases) {
-            this.aliases.add(aliases);
+        public Builder withName(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder withAliases(String alias) {
+            Preconditions.checkState(!alias.contains(SPACE), "Alias %s contains a space", alias);
+            this.aliases.add(alias);
             return this;
         }
 
@@ -91,14 +151,15 @@ public record Command(
             return this;
         }
 
-        public Builder withModule(Module module){
-            this.module = module;
-            return this;
-        }
-
-        public Command build() {
+        Command build(Module module) {
+            Preconditions.checkNotNull(name, "A command name must be specified");
             Preconditions.checkNotNull(commandCallback, "A command callback must be specified");
-            Preconditions.checkNotNull(module, "A module must be assigned to this command");
+
+            ImmutableSet<String> aliases = this.aliases.build();
+            Preconditions.checkState(
+                isValidAliases(aliases, module.groups()),
+                "A command must have a non-empty alias if there are no module groups"
+            );
 
             ImmutableList<CommandParameter> parameters = this.parameters.build();
             for (int i = 0; i < parameters.size(); i++) {
@@ -107,7 +168,7 @@ public record Command(
                     !commandParameter.remainder() || i == parameters.size() - 1,
                     "Parameter %s of Command %s cannot be remainder only the final parameter can be remainder",
                     commandParameter.name(),
-                    ""
+                    this.name
                 );
             }
 
@@ -120,13 +181,18 @@ public record Command(
             );
 
             return new Command(
-                this.aliases.build(),
-                this.description,
+                this.name,
+                aliases,
+                Optional.ofNullable(this.description),
                 this.commandCallback,
                 parameters,
                 this.preconditions.build(),
                 commandSignature,
-                this.module);
+                module);
+        }
+
+        private static boolean isValidAliases(ImmutableSet<String> commandAliases, ImmutableSet<String> moduleGroups) {
+            return commandAliases.size() > 0 || moduleGroups.size() > 0;
         }
     }
 

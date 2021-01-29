@@ -10,6 +10,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface CommandDescription {
+    String name() default "";
     String[] aliases();
     String description() default "";
     Class<? extends Precondition>[] preconditions() default {};
