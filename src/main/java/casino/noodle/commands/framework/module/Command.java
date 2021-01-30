@@ -1,8 +1,10 @@
 package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.results.PreconditionResult;
-import casino.noodle.commands.framework.results.PreconditionsFailedResult;
+import casino.noodle.commands.framework.results.FailedResult;
+import casino.noodle.commands.framework.results.precondition.PreconditionResult;
+import casino.noodle.commands.framework.results.precondition.PreconditionsFailedResult;
+import casino.noodle.commands.framework.results.precondition.SuccessfulPreconditionResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -45,22 +47,23 @@ public class Command {
     }
 
     public PreconditionResult runPreconditions(CommandContext context) {
-        PreconditionResult moduleResult = module.runPreconditions(context, this);
+        PreconditionResult moduleResult = module.runPreconditions(context);
 
         if (!moduleResult.isSuccess()) {
             return moduleResult;
         }
 
         if (preconditions.isEmpty()) {
-            return PreconditionResult.Success.get();
+            return SuccessfulPreconditionResult.get();
         }
 
-        ImmutableList.Builder<PreconditionResult.Failure> failedResults = ImmutableList.builder();
+        ImmutableList.Builder<FailedResult> failedResults = ImmutableList.builder();
         boolean failedResult = false;
 
+        // todo get preconditions from context bean provider
         for (Precondition precondition : preconditions) {
-            PreconditionResult result = precondition.run(context, this);
-            if (result instanceof PreconditionResult.Failure failed) {
+            PreconditionResult result = precondition.run(context);
+            if (result instanceof FailedResult failed) {
                 failedResults.add(failed);
                 failedResult = true;
             }
@@ -68,7 +71,7 @@ public class Command {
 
         return failedResult
             ? new PreconditionsFailedResult(failedResults.build())
-            : PreconditionResult.Success.get();
+            : SuccessfulPreconditionResult.get();
     }
 
     public String name() {

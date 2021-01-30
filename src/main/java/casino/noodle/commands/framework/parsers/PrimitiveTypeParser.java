@@ -1,8 +1,7 @@
 package casino.noodle.commands.framework.parsers;
 
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.module.Command;
-import casino.noodle.commands.framework.results.TypeParserResult;
+import casino.noodle.commands.framework.results.typeparser.TypeParserResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
@@ -49,12 +48,12 @@ public class PrimitiveTypeParser<T> implements TypeParser<T> {
     }
 
     @Override
-    public TypeParserResult<T> parse(CommandContext context, Command command, String input) {
+    public TypeParserResult parse(CommandContext context, String input) {
         try {
             T value = parseFunction.apply(input);
             return success(value);
         } catch (Exception e) {
-            return failure(command, "Failed to parse %s as %s", input, clazz);
+            return failure("Failed to parse %s as %s", input, clazz);
         }
     }
 }

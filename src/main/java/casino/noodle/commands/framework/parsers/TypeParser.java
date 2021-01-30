@@ -1,18 +1,19 @@
 package casino.noodle.commands.framework.parsers;
 
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.module.Command;
-import casino.noodle.commands.framework.results.TypeParserResult;
+import casino.noodle.commands.framework.results.typeparser.FailedTypeParserResult;
+import casino.noodle.commands.framework.results.typeparser.SuccessfulTypeParserResult;
+import casino.noodle.commands.framework.results.typeparser.TypeParserResult;
 
 @FunctionalInterface
 public interface TypeParser<T> {
-    TypeParserResult<T> parse(CommandContext context, Command command, String input);
+    TypeParserResult parse(CommandContext context, String input);
 
-    default TypeParserResult<T> success(T value) {
-        return new TypeParserResult.Success<>(value);
+    default SuccessfulTypeParserResult<T> success(T value) {
+        return new SuccessfulTypeParserResult<>(value);
     }
 
-    default TypeParserResult<T> failure(Command command, String reason, Object... args) {
-        return new TypeParserResult.Failure<>(command, String.format(reason, args));
+    default FailedTypeParserResult failure(String reason, Object... args) {
+        return new FailedTypeParserResult(String.format(reason, args));
     }
 }

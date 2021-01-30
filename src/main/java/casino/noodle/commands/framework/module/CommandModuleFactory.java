@@ -2,11 +2,10 @@ package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.exceptions.MissingBeanException;
 import casino.noodle.commands.framework.module.annotations.CommandDescription;
 import casino.noodle.commands.framework.module.annotations.ModuleDescription;
 import casino.noodle.commands.framework.module.annotations.ParameterDescription;
-import casino.noodle.commands.framework.results.CommandResult;
+import casino.noodle.commands.framework.results.command.CommandResult;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import reactor.core.publisher.Mono;
@@ -16,7 +15,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.function.Supplier;
 
 public final class CommandModuleFactory {
     private static final String SPACE = " ";
@@ -24,10 +22,26 @@ public final class CommandModuleFactory {
     private CommandModuleFactory() {
     }
 
-    public static <T extends CommandModuleBase> Module create(Class<T> clazz, BeanProvider beanProvider) {
+    public static <S extends CommandContext, T extends CommandModuleBase<S>> Module create(
+            Class<S> contextClazz,
+            Class<T> moudleClazz,
+            BeanProvider beanProvider) {
+        CommandCallbackFactory callbackFactory = new CommandCallbackFactory();
+
         Module.Builder moduleBuilder = Module.builder()
-            .withName(clazz.getSimpleName());
-        ModuleDescription moduleDescriptionAnnotation = clazz.getAnnotation(ModuleDescription.class);
+            .withName(moudleClazz.getSimpleName());
+
+        Constructor<?>[] constructors = moudleClazz.getConstructors();
+        Preconditions.checkState(constructors.length == 1, "There must be only 1 public constructor");
+
+        Constructor<?> constructor = constructors[0];
+
+        Class<?>[] constructorParameterTypes = constructor.getParameterTypes();
+        for (Class<?> parameterType : constructorParameterTypes) {
+            moduleBuilder.withBean(parameterType);
+        }
+
+        ModuleDescription moduleDescriptionAnnotation = moudleClazz.getAnnotation(ModuleDescription.class);
         if (moduleDescriptionAnnotation != null) {
             if (!Strings.isNullOrEmpty(moduleDescriptionAnnotation.name())) {
                 moduleBuilder.withName(moduleDescriptionAnnotation.name());
@@ -52,68 +66,67 @@ public final class CommandModuleFactory {
             }
         }
 
-        Method[] methods = clazz.getMethods();
+        Method[] methods = moudleClazz.getMethods();
         for (Method method : methods) {
             CommandDescription commandDescriptionAnnotation = method.getAnnotation(CommandDescription.class);
-            if (commandDescriptionAnnotation != null) {
-                Preconditions.checkState(
-                    isValidCommandSignature(method),
-                    "Method %s has invalid signature",
-                    method
-                );
-                Preconditions.checkState(
-                    isValidAliases(moduleDescriptionAnnotation, commandDescriptionAnnotation),
-                    "A command must have aliases if the module has no groups"
-                );
-
-                Supplier<Object> moduleConstructor = createModuleConstructor(clazz, beanProvider);
-                Command.Builder commandBuilder = Command.builder()
-                    .withName(method.getName())
-                    .withCallback(createCommandCallback(moduleConstructor, method));
-
-                for (String alias : commandDescriptionAnnotation.aliases()) {
-                    commandBuilder.withAliases(alias);
-                }
-
-                if (!Strings.isNullOrEmpty(commandDescriptionAnnotation.name())) {
-                    commandBuilder.withName(commandDescriptionAnnotation.name());
-                }
-
-                if (!Strings.isNullOrEmpty(commandDescriptionAnnotation.description())) {
-                    commandBuilder.withDescription(commandDescriptionAnnotation.description());
-                }
-
-                Class<? extends Precondition>[] preconditionClazzes = commandDescriptionAnnotation.preconditions();
-                for (Class<? extends Precondition> preconditionClazz : preconditionClazzes) {
-                    Precondition precondition = Preconditions.checkNotNull(
-                        beanProvider.getBean(preconditionClazz),
-                        "A precondition of type %s must be added to the bean provider",
-                        preconditionClazz
-                    );
-                    commandBuilder.withPrecondition(precondition);
-                }
-
-                Parameter[] parameters = method.getParameters();
-                for (int i = 1; i < parameters.length; i++) {
-                    Parameter parameter = parameters[i];
-                    Class<?> parameterType = parameter.getType();
-                    CommandParameter.Builder cmdParameterBuilder = CommandParameter.builder()
-                        .withType(parameterType)
-                        .withName(parameter.getName());
-
-                    ParameterDescription parameterDescriptionAnnotation = parameter.getAnnotation(ParameterDescription.class);
-                    if (parameterDescriptionAnnotation != null) {
-                        cmdParameterBuilder
-                            .withDescription(parameterDescriptionAnnotation.description())
-                            .withRemainder(parameterDescriptionAnnotation.remainder())
-                            .withName(parameterDescriptionAnnotation.name());
-                    }
-
-                    commandBuilder.withParameter(cmdParameterBuilder.build());
-                }
-
-                moduleBuilder.withCommand(commandBuilder);
+            if (commandDescriptionAnnotation == null) {
+                continue;
             }
+
+            Preconditions.checkState(
+                isValidCommandSignature(method),
+                "Method %s has invalid signature",
+                method
+            );
+            Preconditions.checkState(
+                isValidAliases(moduleDescriptionAnnotation, commandDescriptionAnnotation),
+                "A command must have aliases if the module has no groups"
+            );
+
+            Command.Builder commandBuilder = Command.builder()
+                .withName(method.getName())
+                .withCallback(callbackFactory.createCommandCallback(contextClazz, moudleClazz, method));
+
+            for (String alias : commandDescriptionAnnotation.aliases()) {
+                commandBuilder.withAliases(alias);
+            }
+
+            if (!Strings.isNullOrEmpty(commandDescriptionAnnotation.name())) {
+                commandBuilder.withName(commandDescriptionAnnotation.name());
+            }
+
+            if (!Strings.isNullOrEmpty(commandDescriptionAnnotation.description())) {
+                commandBuilder.withDescription(commandDescriptionAnnotation.description());
+            }
+
+            Class<? extends Precondition>[] preconditionClazzes = commandDescriptionAnnotation.preconditions();
+            for (Class<? extends Precondition> preconditionClazz : preconditionClazzes) {
+                Precondition precondition = Preconditions.checkNotNull(
+                    beanProvider.getBean(preconditionClazz),
+                    "A precondition of type %s must be added to the bean provider",
+                    preconditionClazz
+                );
+                commandBuilder.withPrecondition(precondition);
+            }
+
+            Parameter[] parameters = method.getParameters();
+            for (Parameter parameter : parameters) {
+                Class<?> parameterType = parameter.getType();
+                CommandParameter.Builder commandParameterBuilder = CommandParameter.builder()
+                    .withType(parameterType)
+                    .withName(parameter.getName());
+
+                ParameterDescription parameterDescriptionAnnotation = parameter.getAnnotation(ParameterDescription.class);
+                if (parameterDescriptionAnnotation != null) {
+                    commandParameterBuilder.withDescription(parameterDescriptionAnnotation.description())
+                        .withRemainder(parameterDescriptionAnnotation.remainder())
+                        .withName(parameterDescriptionAnnotation.name());
+                }
+
+                commandBuilder.withParameter(commandParameterBuilder.build());
+            }
+
+            moduleBuilder.withCommand(commandBuilder);
         }
 
         return moduleBuilder.build();
@@ -121,16 +134,12 @@ public final class CommandModuleFactory {
 
     private static boolean isValidCommandSignature(Method method) {
         Type returnType = method.getGenericReturnType();
-        Class<?>[] parameterTypes = method.getParameterTypes();
-
         return returnType instanceof ParameterizedType parameterizedType
             && parameterizedType.getRawType() instanceof Class<?> rawTypeClazz
             && rawTypeClazz.isAssignableFrom(Mono.class)
             && parameterizedType.getActualTypeArguments().length == 1
             && parameterizedType.getActualTypeArguments()[0] instanceof Class<?> typeArgumentClazz
-            && typeArgumentClazz.isAssignableFrom(CommandResult.class)
-            && parameterTypes.length > 0
-            && parameterTypes[0].isAssignableFrom(CommandContext.class);
+            && typeArgumentClazz.isAssignableFrom(CommandResult.class);
     }
 
     private static boolean isValidAliases(
@@ -143,60 +152,5 @@ public final class CommandModuleFactory {
         return commandDescriptionAnnotation.aliases().length > 0
             || moduleDescriptionAnnotation != null
             && moduleDescriptionAnnotation.groups().length > 0;
-    }
-
-    private static Supplier<Object> createModuleConstructor(Class<?> moduleClass, BeanProvider beanProvider) {
-        Constructor<?>[] constructors = moduleClass.getConstructors();
-        Preconditions.checkState(constructors.length > 0, "Public constructor for module %s", moduleClass);
-        Constructor<?> reflectedConstructor = constructors[0];
-        Class<?>[] parameterTypes = reflectedConstructor.getParameterTypes();
-        try {
-            return () -> {
-                try {
-                    if (parameterTypes.length == 0) {
-                        return reflectedConstructor.newInstance();
-                    }
-
-                    Object[] beans = new Object[parameterTypes.length];
-                    for (int i = 0; i < parameterTypes.length; i++) {
-                        Class<?> parameterType = parameterTypes[i];
-                        Object bean = beanProvider.getBean(parameterType);
-                        if (bean == null) {
-                            throw new MissingBeanException(parameterType);
-                        }
-
-                        beans[i] = bean;
-                    }
-                    return reflectedConstructor.newInstance(beans);
-                } catch (Throwable throwable) {
-                    throw new RuntimeException(throwable);
-                }
-            };
-        } catch (Exception exception) {
-            throw new RuntimeException(exception);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static CommandCallback createCommandCallback(Supplier<Object> moduleConstructor, Method reflectedMethod) {
-        try {
-            return (commandContext, parameters) -> {
-                try {
-                    Object module = moduleConstructor.get();
-                    if (parameters.length > 0) {
-                        Object[] temp = new Object[parameters.length + 1];
-                        temp[0] = commandContext;
-                        System.arraycopy(parameters, 0, temp, 1, parameters.length);
-                        return (Mono<CommandResult>) reflectedMethod.invoke(module, temp);
-                    }
-
-                    return (Mono<CommandResult>) reflectedMethod.invoke(module, commandContext);
-                } catch (Throwable throwable) {
-                    return Mono.error(throwable);
-                }
-            };
-        } catch (Exception exception) {
-            throw new RuntimeException(exception);
-        }
     }
 }

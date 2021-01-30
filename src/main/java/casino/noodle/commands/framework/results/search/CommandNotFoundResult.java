@@ -1,4 +1,6 @@
-package casino.noodle.commands.framework.results;
+package casino.noodle.commands.framework.results.search;
+
+import casino.noodle.commands.framework.results.FailedResult;
 
 public class CommandNotFoundResult implements FailedResult {
     private static class SingletonHolder {

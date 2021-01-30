@@ -1,5 +1,6 @@
-package casino.noodle.commands.framework.results;
+package casino.noodle.commands.framework.results.search;
 
+import casino.noodle.commands.framework.results.FailedResult;
 import com.google.common.collect.ImmutableList;
 
 public record CommandMatchFailedResult(ImmutableList<FailedResult> failedResults) implements FailedResult {

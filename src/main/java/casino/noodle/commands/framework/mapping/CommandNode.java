@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 class CommandNode {
+    private static final String[] EMPTY = new String[0];
 
     private final ImmutableMap<String, List<Command>> commandsByAlias;
     private final ImmutableMap<String, CommandNode> nodeByAlias;
@@ -21,38 +22,40 @@ class CommandNode {
         this.nodeByAlias = ImmutableMap.copyOf(nodeByAlias);
     }
 
+    // todo hot method
     public ImmutableList<CommandSearchResult> findCommands(String input) {
         ImmutableList.Builder<CommandSearchResult> results = ImmutableList.builder();
-        findCommands(results, new ArrayList<>(), input.split(" "));
+        findCommands(results, 0, input.split(" "));
         return results.build();
     }
 
     // todo optimise this
-    private void findCommands(ImmutableList.Builder<CommandSearchResult> results, List<String> path, String[] input) {
+    // input can be replaced with a moving index instead of splitting
+    // cache input to results since the map is immutable
+    private void findCommands(ImmutableList.Builder<CommandSearchResult> results, int pathLength, String[] input) {
         if (input.length == 0) {
             return;
         }
 
         String segment = input[0];
-        String[] remainingInput = new String[input.length - 1];
+        String[] remainingInput = input.length == 1 ? EMPTY : new String[input.length - 1];
         if (remainingInput.length > 0) {
             System.arraycopy(input, 1, remainingInput, 0, input.length - 1);
         }
 
         List<Command> commands = commandsByAlias.get(segment);
         if (commands != null) {
-            path.add(segment);
+            pathLength++;
             for (Command command : commands) {
-                results.add(new CommandSearchResult(command, ImmutableList.copyOf(path), segment, remainingInput));
+                results.add(new CommandSearchResult(command, pathLength, segment, remainingInput));
             }
-            path.remove(path.size() - 1);
+            pathLength--;
         }
 
         CommandNode commandNode = nodeByAlias.get(segment);
         if (commandNode != null) {
-            path.add(segment);
-            commandNode.findCommands(results, path, remainingInput);
-            path.remove(path.size() - 1);
+            pathLength++;
+            commandNode.findCommands(results, pathLength, remainingInput);
         }
     }
 

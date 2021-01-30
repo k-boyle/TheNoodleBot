@@ -1,8 +1,10 @@
 package casino.noodle.commands.framework.module;
 
 import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.results.PreconditionResult;
-import casino.noodle.commands.framework.results.PreconditionsFailedResult;
+import casino.noodle.commands.framework.results.FailedResult;
+import casino.noodle.commands.framework.results.precondition.PreconditionResult;
+import casino.noodle.commands.framework.results.precondition.PreconditionsFailedResult;
+import casino.noodle.commands.framework.results.precondition.SuccessfulPreconditionResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -18,12 +20,14 @@ public class Module {
     private final ImmutableList<Command> commands;
     private final ImmutableList<Precondition> preconditions;
     private final Optional<String> description;
+    private final ImmutableList<Class<?>> beans;
 
     private Module(
             String name, ImmutableSet<String> groups,
             List<Command.Builder> commands,
             ImmutableList<Precondition> preconditions,
-            Optional<String> description) {
+            Optional<String> description,
+            ImmutableList<Class<?>> beans) {
         this.name = name;
         this.groups = groups;
         this.commands = commands.stream()
@@ -31,23 +35,25 @@ public class Module {
             .collect(ImmutableList.toImmutableList());
         this.preconditions = preconditions;
         this.description = description;
+        this.beans = beans;
     }
 
     static Builder builder() {
         return new Builder();
     }
 
-    PreconditionResult runPreconditions(CommandContext context, Command command) {
+    PreconditionResult runPreconditions(CommandContext context) {
         if (preconditions.isEmpty()) {
-            return PreconditionResult.Success.get();
+            return SuccessfulPreconditionResult.get();
         }
 
-        ImmutableList.Builder<PreconditionResult.Failure> failedResults = ImmutableList.builder();
+        ImmutableList.Builder<FailedResult> failedResults = ImmutableList.builder();
         boolean failedResult = false;
 
+        // todo get preconditions from context bean provider
         for (Precondition precondition : preconditions) {
-            PreconditionResult result = precondition.run(context, command);
-            if (result instanceof PreconditionResult.Failure failed) {
+            PreconditionResult result = precondition.run(context);
+            if (result instanceof FailedResult failed) {
                 failedResults.add(failed);
                 failedResult = true;
             }
@@ -55,7 +61,7 @@ public class Module {
 
         return failedResult
             ? new PreconditionsFailedResult(failedResults.build())
-            : PreconditionResult.Success.get();
+            : SuccessfulPreconditionResult.get();
     }
 
     public String name() {
@@ -74,12 +80,17 @@ public class Module {
         return description;
     }
 
+    public ImmutableList<Class<?>> beans() {
+        return beans;
+    }
+
     public static class Builder {
         private static final String SPACE = " ";
 
         private final ImmutableSet.Builder<String> groups;
         private final List<Command.Builder> commands;
         private final ImmutableList.Builder<Precondition> preconditions;
+        private final ImmutableList.Builder<Class<?>> beans;
 
         private String name;
         private String description;
@@ -88,6 +99,7 @@ public class Module {
             this.groups = ImmutableSet.builder();
             this.commands = new ArrayList<>();
             this.preconditions = ImmutableList.builder();
+            this.beans = ImmutableList.builder();
         }
 
         public Builder withName(String name) {
@@ -116,6 +128,11 @@ public class Module {
             return this;
         }
 
+        public Builder withBean(Class<?> bean) {
+            this.beans.add(bean);
+            return this;
+        }
+
         public Module build() {
             Preconditions.checkNotNull(this.name, "A module name must be specified");
 
@@ -124,8 +141,8 @@ public class Module {
                 this.groups.build(),
                 this.commands,
                 this.preconditions.build(),
-                Optional.ofNullable(this.description)
-            );
+                Optional.ofNullable(this.description),
+                this.beans.build());
         }
     }
 }

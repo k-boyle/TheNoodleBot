@@ -2,13 +2,41 @@ package casino.noodle.commands.framework.module;
 
 import com.google.common.base.Preconditions;
 
-public record CommandParameter(
-        Class<?> type,
-        String description,
-        String name,
-        boolean remainder) {
+public final class CommandParameter {
+    private final Class<?> type;
+    private final String description;
+    private final String name;
+    private final boolean remainder;
+
+    public CommandParameter(
+            Class<?> type,
+            String description,
+            String name,
+            boolean remainder) {
+        this.type = type;
+        this.description = description;
+        this.name = name;
+        this.remainder = remainder;
+    }
+
     static Builder builder() {
         return new Builder();
+    }
+
+    public Class<?> type() {
+        return type;
+    }
+
+    public String description() {
+        return description;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public boolean remainder() {
+        return remainder;
     }
 
     static class Builder {

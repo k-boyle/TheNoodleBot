@@ -1,10 +1,16 @@
 package casino.noodle.commands.framework;
 
+import casino.noodle.commands.framework.exceptions.InvalidResultException;
 import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.module.CommandParameter;
 import casino.noodle.commands.framework.parsers.TypeParser;
-import casino.noodle.commands.framework.results.ArgumentParserResult;
-import casino.noodle.commands.framework.results.TypeParserResult;
+import casino.noodle.commands.framework.results.ExecutionErrorResult;
+import casino.noodle.commands.framework.results.FailedResult;
+import casino.noodle.commands.framework.results.Result;
+import casino.noodle.commands.framework.results.argumentparser.ArgumentMismatchArgumentParserResult;
+import casino.noodle.commands.framework.results.argumentparser.SuccessfulArgumentParserResult;
+import casino.noodle.commands.framework.results.typeparser.SuccessfulTypeParserResult;
+import casino.noodle.commands.framework.results.typeparser.TypeParserResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -22,25 +28,24 @@ class ArgumentParser {
     }
 
     @SuppressWarnings("rawtypes")
-    ArgumentParserResult parse(CommandContext context, Command command, String[] rawArguments) {
+    public Result parse(CommandContext context, Command command, String[] rawArguments) {
         ImmutableList<CommandParameter> parameters = command.parameters();
 
         if (parameters.size() > rawArguments.length) {
-            return new ArgumentParserResult.ArgumentMismatch(command, ArgumentParserResult.ArgumentMismatch.Reason.TOO_FEW_ARGUMENTS);
+            return new ArgumentMismatchArgumentParserResult(command, ArgumentMismatchArgumentParserResult.Reason.TOO_FEW_ARGUMENTS);
         }
 
         boolean remainder = !parameters.isEmpty() && parameters.get(parameters.size() - 1).remainder();
 
         if (parameters.size() < rawArguments.length && !remainder) {
-            return new ArgumentParserResult.ArgumentMismatch(command, ArgumentParserResult.ArgumentMismatch.Reason.TOO_MANY_ARGUMENTS);
+            return new ArgumentMismatchArgumentParserResult(command, ArgumentMismatchArgumentParserResult.Reason.TOO_MANY_ARGUMENTS);
         }
 
         if (parameters.isEmpty()) {
-            return ArgumentParserResult.Success.empty();
+            return SuccessfulArgumentParserResult.empty();
         }
 
         Object[] parsedArguments = new Object[parameters.size()];
-
         for (int i = 0; i < parameters.size(); i++) {
             CommandParameter parameter = parameters.get(i);
             Class<?> type = parameter.type();
@@ -58,19 +63,20 @@ class ArgumentParser {
             );
 
             try {
-                TypeParserResult<?> parseResult = typeParser.parse(context, command, rawArgument);
-                if (parseResult instanceof TypeParserResult.Success success) {
+                TypeParserResult parseResult = typeParser.parse(context, rawArgument);
+                if (parseResult instanceof SuccessfulTypeParserResult success) {
                     parsedArguments[i] = success.value();
+                } else if (parseResult instanceof FailedResult failedResult) {
+                    return failedResult;
                 } else {
-                    TypeParserResult.Failure failure = (TypeParserResult.Failure) parseResult;
-                    return new ArgumentParserResult.ParseFailed(command, type, rawArgument, failure);
+                    throw new InvalidResultException(SuccessfulTypeParserResult.class, parseResult.getClass());
                 }
             } catch (Exception ex) {
-                return new ArgumentParserResult.Exception(command, ex);
+                return new ExecutionErrorResult(command, ex);
             }
         }
 
-        return new ArgumentParserResult.Success(parsedArguments);
+        return new SuccessfulArgumentParserResult(parsedArguments);
     }
 
     private static String getRawArgument(boolean remainder, String[] rawArguments, int index) {

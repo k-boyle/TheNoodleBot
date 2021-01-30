@@ -1,5 +1,6 @@
 package casino.noodle.commands.framework;
 
+import casino.noodle.commands.framework.exceptions.InvalidResultException;
 import casino.noodle.commands.framework.mapping.CommandMap;
 import casino.noodle.commands.framework.mapping.CommandSearchResult;
 import casino.noodle.commands.framework.module.Command;
@@ -8,13 +9,13 @@ import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
 import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.parsers.TypeParser;
-import casino.noodle.commands.framework.results.ArgumentParserResult;
-import casino.noodle.commands.framework.results.CommandMatchFailedResult;
-import casino.noodle.commands.framework.results.CommandNotFoundResult;
 import casino.noodle.commands.framework.results.ExecutionErrorResult;
 import casino.noodle.commands.framework.results.FailedResult;
-import casino.noodle.commands.framework.results.PreconditionResult;
 import casino.noodle.commands.framework.results.Result;
+import casino.noodle.commands.framework.results.argumentparser.SuccessfulArgumentParserResult;
+import casino.noodle.commands.framework.results.precondition.PreconditionResult;
+import casino.noodle.commands.framework.results.search.CommandMatchFailedResult;
+import casino.noodle.commands.framework.results.search.CommandNotFoundResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -25,7 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CommandHandler {
+public class CommandHandler<T extends CommandContext> {
+    private static final Object[] EMPTY_BEANS = new Object[0];
+
     private final CommandMap commandMap;
     private final ArgumentParser argumentParser;
 
@@ -35,11 +38,11 @@ public class CommandHandler {
         this.argumentParser = new ArgumentParser(ImmutableMap.copyOf(typeParserByClass));
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public static <T extends CommandContext> Builder<T> builderForContext(Class<T> contextClazz) {
+        return new Builder<>(contextClazz);
     }
 
-    public Mono<Result> executeAsync(String input, CommandContext context) {
+    public Mono<Result> executeAsync(String input, T context) {
         Preconditions.checkNotNull(input);
         Preconditions.checkNotNull(context);
 
@@ -49,16 +52,17 @@ public class CommandHandler {
             return Mono.just(CommandNotFoundResult.get());
         }
 
-        int pathLength = searchResults.get(0).path().size();
+        int pathLength = searchResults.get(0).pathLength();
 
         ImmutableList.Builder<FailedResult> failedResults = null;
 
         for (CommandSearchResult searchResult : searchResults) {
-            if (searchResult.path().size() < pathLength) {
+            if (searchResult.pathLength() < pathLength) {
                 continue;
             }
 
             Command command = searchResult.command();
+            context.command = command;
 
             try {
                 PreconditionResult preconditionResult = command.runPreconditions(context);
@@ -77,7 +81,7 @@ public class CommandHandler {
                 return Mono.just(new ExecutionErrorResult(command, ex));
             }
 
-            ArgumentParserResult argumentParserResult = argumentParser.parse(
+            Result argumentParserResult = argumentParser.parse(
                 context,
                 searchResult.command(),
                 searchResult.remainingArguments()
@@ -95,51 +99,75 @@ public class CommandHandler {
                 continue;
             }
 
-            ArgumentParserResult.Success success = (ArgumentParserResult.Success) argumentParserResult;
+            if (argumentParserResult instanceof SuccessfulArgumentParserResult success) {
+                ImmutableList<Class<?>> beanClazzes = command.module().beans();
+                Object[] beans = getBeans(context, beanClazzes);
+                return command.commandCallback().execute(context, beans, success.parsedArguments()).cast(Result.class);
+            }
 
-            return command.commandCallback().execute(context, success.parsedArguments()).cast(Result.class);
+            throw new InvalidResultException(SuccessfulArgumentParserResult.class, argumentParserResult.getClass());
         }
 
         assert failedResults != null;
         return Mono.just(new CommandMatchFailedResult(failedResults.build()));
     }
 
-    public static class Builder {
+    private static Object[] getBeans(CommandContext context, ImmutableList<Class<?>> beanClazzes) {
+        if (beanClazzes.isEmpty()) {
+            return EMPTY_BEANS;
+        }
+
+        Object[] beans = new Object[beanClazzes.size()];
+        for (int i = 0; i < beanClazzes.size(); i++) {
+            Class<?> beanClazz = beanClazzes.get(i);
+            beans[i] = Preconditions.checkNotNull(
+                context.beanProvider().getBean(beanClazz),
+                "A bean of type %s must be in your provider",
+                beanClazz
+            );
+        }
+
+        return beans;
+    }
+
+    public static class Builder<T extends CommandContext> {
+        private final Class<T> contextClazz;
         private final Map<Class<?>, TypeParser<?>> typeParserByClass;
         private final CommandMap.Builder commandMap;
-        private final List<Class<? extends CommandModuleBase>> commandModules;
+        private final List<Class<? extends CommandModuleBase<T>>> commandModules;
 
         private BeanProvider beanProvider;
 
-        private Builder() {
+        private Builder(Class<T> contextClazz) {
+            this.contextClazz = contextClazz;
             this.typeParserByClass = new HashMap<>(PrimitiveTypeParser.DEFAULT_PARSERS);
             this.commandMap = CommandMap.builder();
             this.commandModules = new ArrayList<>();
             this.beanProvider = BeanProvider.get();
         }
 
-        public <T> Builder withTypeParser(Class<T> clazz, TypeParser<T> parser) {
+        public <S >Builder<T> withTypeParser(Class<S> clazz, TypeParser<S> parser) {
             this.typeParserByClass.put(clazz, parser);
             return this;
         }
 
-        public <T extends CommandModuleBase> Builder withModule(Class<T> moduleClazz) {
+        public <S extends CommandModuleBase<T>> Builder<T> withModule(Class<S> moduleClazz) {
             this.commandModules.add(moduleClazz);
             return this;
         }
 
-        public Builder withBeanProvider(BeanProvider beanProvider) {
+        public Builder<T> withBeanProvider(BeanProvider beanProvider) {
             this.beanProvider = beanProvider;
             return this;
         }
 
-        public CommandHandler build() {
-            for (Class<? extends CommandModuleBase> moduleClazz : commandModules) {
-                Module module = CommandModuleFactory.create(moduleClazz, this.beanProvider);
+        public CommandHandler<T> build() {
+            for (Class<? extends CommandModuleBase<T>> moduleClazz : commandModules) {
+                Module module = CommandModuleFactory.create(contextClazz, moduleClazz, this.beanProvider);
                 this.commandMap.map(module);
             }
 
-            return new CommandHandler(this.typeParserByClass, this.commandMap.build());
+            return new CommandHandler<T>(this.typeParserByClass, this.commandMap.build());
         }
     }
 }
