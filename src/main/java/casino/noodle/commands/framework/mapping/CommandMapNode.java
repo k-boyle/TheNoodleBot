@@ -11,51 +11,55 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-class CommandNode {
+class CommandMapNode {
     private static final String[] EMPTY = new String[0];
 
     private final ImmutableMap<String, List<Command>> commandsByAlias;
-    private final ImmutableMap<String, CommandNode> nodeByAlias;
+    private final ImmutableMap<String, CommandMapNode> nodeByAlias;
 
-    private CommandNode(Map<String, List<Command>> commandsByAlias, Map<String, CommandNode> nodeByAlias) {
+    private CommandMapNode(Map<String, List<Command>> commandsByAlias, Map<String, CommandMapNode> nodeByAlias) {
         this.commandsByAlias = ImmutableMap.copyOf(commandsByAlias);
         this.nodeByAlias = ImmutableMap.copyOf(nodeByAlias);
     }
 
-    // todo hot method
     public ImmutableList<CommandSearchResult> findCommands(String input) {
         ImmutableList.Builder<CommandSearchResult> results = ImmutableList.builder();
-        findCommands(results, 0, input.split(" "));
+        findCommands(results, 0, input, 0);
         return results.build();
     }
 
-    // todo optimise this
-    // input can be replaced with a moving index instead of splitting
-    // cache input to results since the map is immutable
-    private void findCommands(ImmutableList.Builder<CommandSearchResult> results, int pathLength, String[] input) {
-        if (input.length == 0) {
+    private void findCommands(ImmutableList.Builder<CommandSearchResult> results, int pathLength, String input, int index) {
+        if (input.length() == 0 || index == input.length()) {
             return;
         }
 
-        String segment = input[0];
-        String[] remainingInput = input.length == 1 ? EMPTY : new String[input.length - 1];
-        if (remainingInput.length > 0) {
-            System.arraycopy(input, 1, remainingInput, 0, input.length - 1);
-        }
+        int nextSpace = input.indexOf(" ", index);
 
-        List<Command> commands = commandsByAlias.get(segment);
-        if (commands != null) {
-            pathLength++;
-            for (Command command : commands) {
-                results.add(new CommandSearchResult(command, pathLength, segment, remainingInput));
+        if (nextSpace == -1) {
+            String segment = index == 0 ? input : input.substring(index);
+            List<Command> commands = commandsByAlias.get(segment);
+            if (commands != null) {
+                pathLength++;
+                for (Command command : commands) {
+                    results.add(new CommandSearchResult(command, pathLength, segment, index + 1));
+                }
             }
-            pathLength--;
-        }
+        } else {
+            String segment = input.substring(index, nextSpace);
+            List<Command> commands = commandsByAlias.get(segment);
+            if (commands != null) {
+                pathLength++;
+                for (Command command : commands) {
+                    results.add(new CommandSearchResult(command, pathLength, input, nextSpace + 1));
+                }
+                pathLength--;
+            }
 
-        CommandNode commandNode = nodeByAlias.get(segment);
-        if (commandNode != null) {
-            pathLength++;
-            commandNode.findCommands(results, pathLength, remainingInput);
+            CommandMapNode commandMapNode = nodeByAlias.get(segment);
+            if (commandMapNode != null) {
+                pathLength++;
+                commandMapNode.findCommands(results, pathLength, input, nextSpace + 1);
+            }
         }
     }
 
@@ -90,7 +94,7 @@ class CommandNode {
             } else {
                 nodeByAlias.compute(path, (p, node) -> {
                     if (node == null) {
-                        node = CommandNode.builder();
+                        node = CommandMapNode.builder();
                     }
 
                     node.addCommand(command, paths, index + 1);
@@ -115,11 +119,11 @@ class CommandNode {
             }
         }
 
-        public CommandNode build() {
-            Map<String, CommandNode> nodeByAlias = this.nodeByAlias.entrySet()
+        public CommandMapNode build() {
+            Map<String, CommandMapNode> nodeByAlias = this.nodeByAlias.entrySet()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, es -> es.getValue().build()));
-            return new CommandNode(this.commandsByAlias, nodeByAlias);
+            return new CommandMapNode(this.commandsByAlias, nodeByAlias);
         }
     }
 }

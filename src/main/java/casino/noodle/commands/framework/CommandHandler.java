@@ -20,6 +20,8 @@ import casino.noodle.commands.framework.results.search.CommandNotFoundResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
@@ -28,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 
 public class CommandHandler<T extends CommandContext> {
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
     private static final Object[] EMPTY_BEANS = new Object[0];
 
     private final CommandMap commandMap;
@@ -47,6 +51,8 @@ public class CommandHandler<T extends CommandContext> {
         Preconditions.checkNotNull(input);
         Preconditions.checkNotNull(context);
 
+        logger.trace("Finding command to execute from {}", input);
+
         ImmutableList<CommandSearchResult> searchResults = commandMap.findCommands(input);
 
         if (searchResults.isEmpty()) {
@@ -62,8 +68,11 @@ public class CommandHandler<T extends CommandContext> {
                 continue;
             }
 
+
             Command command = searchResult.command();
             context.command = command;
+
+            logger.trace("Attempting to execute {}", command);
 
             try {
                 PreconditionResult preconditionResult = command.runPreconditions(context);
@@ -82,11 +91,7 @@ public class CommandHandler<T extends CommandContext> {
                 return Mono.just(new ExecutionErrorResult(command, ex));
             }
 
-            Result argumentParserResult = argumentParser.parse(
-                context,
-                searchResult.command(),
-                searchResult.remainingArguments()
-            );
+            Result argumentParserResult = argumentParser.parse(context, searchResult.input(), searchResult.offset());
 
             if (argumentParserResult instanceof FailedResult failedResult) {
                 if (searchResults.size() == 1) {
@@ -99,6 +104,8 @@ public class CommandHandler<T extends CommandContext> {
                 failedResults.add(failedResult);
                 continue;
             }
+
+            logger.trace("Found command match, executing {}", command);
 
             if (argumentParserResult instanceof SuccessfulArgumentParserResult success) {
                 ImmutableList<Class<?>> beanClazzes = command.module().beans();

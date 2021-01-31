@@ -5,6 +5,7 @@ import casino.noodle.commands.framework.results.FailedResult;
 import casino.noodle.commands.framework.results.precondition.PreconditionResult;
 import casino.noodle.commands.framework.results.precondition.PreconditionsFailedResult;
 import casino.noodle.commands.framework.results.precondition.SuccessfulPreconditionResult;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -42,7 +43,7 @@ public class Command {
         this.module = module;
     }
 
-    static Builder builder() {
+    public static Builder builder() {
         return new Builder();
     }
 
@@ -60,7 +61,6 @@ public class Command {
         ImmutableList.Builder<FailedResult> failedResults = ImmutableList.builder();
         boolean failedResult = false;
 
-        // todo get preconditions from context bean provider
         for (Precondition precondition : preconditions) {
             PreconditionResult result = precondition.run(context);
             if (result instanceof FailedResult failed) {
@@ -104,6 +104,13 @@ public class Command {
 
     public Module module() {
         return module;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+            .add("name", name)
+            .toString();
     }
 
     public static class Builder {

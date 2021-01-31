@@ -1,11 +1,19 @@
 package casino.noodle.jmh;
 
+import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
-
-import java.io.IOException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 class BenchmarkRunner {
-    public static void main(String[] args) throws IOException, RunnerException {
-        org.openjdk.jmh.Main.main(args);
+    public static void main(String[] args) throws RunnerException {
+        Options options = new OptionsBuilder()
+            .include(CommandTotalExecutionBenchmark.class.getSimpleName())
+//            .include(CommandMapBenchmark.class.getSimpleName())
+//            .include(ArgumentParserBenchmark.class.getSimpleName())
+            .forks(1)
+            .build();
+
+        new Runner(options).run();
     }
 }

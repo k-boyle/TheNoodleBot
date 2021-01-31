@@ -8,6 +8,8 @@ import casino.noodle.commands.framework.module.annotations.ParameterDescription;
 import casino.noodle.commands.framework.results.command.CommandResult;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.lang.reflect.Constructor;
@@ -17,6 +19,8 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 public final class CommandModuleFactory {
+    private static final Logger logger = LoggerFactory.getLogger(CommandModuleFactory.class);
+
     private static final String SPACE = " ";
 
     private CommandModuleFactory() {
@@ -24,14 +28,16 @@ public final class CommandModuleFactory {
 
     public static <S extends CommandContext, T extends CommandModuleBase<S>> Module create(
             Class<S> contextClazz,
-            Class<T> moudleClazz,
+            Class<T> moduleClazz,
             BeanProvider beanProvider) {
+        logger.trace("Creating module from {}", moduleClazz.getSimpleName());
+
         CommandCallbackFactory callbackFactory = new CommandCallbackFactory();
 
         Module.Builder moduleBuilder = Module.builder()
-            .withName(moudleClazz.getSimpleName());
+            .withName(moduleClazz.getSimpleName());
 
-        Constructor<?>[] constructors = moudleClazz.getConstructors();
+        Constructor<?>[] constructors = moduleClazz.getConstructors();
         Preconditions.checkState(constructors.length == 1, "There must be only 1 public constructor");
 
         Constructor<?> constructor = constructors[0];
@@ -41,7 +47,7 @@ public final class CommandModuleFactory {
             moduleBuilder.withBean(parameterType);
         }
 
-        ModuleDescription moduleDescriptionAnnotation = moudleClazz.getAnnotation(ModuleDescription.class);
+        ModuleDescription moduleDescriptionAnnotation = moduleClazz.getAnnotation(ModuleDescription.class);
         if (moduleDescriptionAnnotation != null) {
             if (!Strings.isNullOrEmpty(moduleDescriptionAnnotation.name())) {
                 moduleBuilder.withName(moduleDescriptionAnnotation.name());
@@ -66,12 +72,14 @@ public final class CommandModuleFactory {
             }
         }
 
-        Method[] methods = moudleClazz.getMethods();
+        Method[] methods = moduleClazz.getMethods();
         for (Method method : methods) {
             CommandDescription commandDescriptionAnnotation = method.getAnnotation(CommandDescription.class);
             if (commandDescriptionAnnotation == null) {
                 continue;
             }
+
+            logger.trace("Creating command from {}", method.getName());
 
             Preconditions.checkState(
                 isValidCommandSignature(method),
@@ -85,7 +93,7 @@ public final class CommandModuleFactory {
 
             Command.Builder commandBuilder = Command.builder()
                 .withName(method.getName())
-                .withCallback(callbackFactory.createCommandCallback(contextClazz, moudleClazz, method));
+                .withCallback(callbackFactory.createCommandCallback(contextClazz, moduleClazz, method));
 
             for (String alias : commandDescriptionAnnotation.aliases()) {
                 commandBuilder.withAliases(alias);
@@ -128,6 +136,8 @@ public final class CommandModuleFactory {
 
             moduleBuilder.withCommand(commandBuilder);
         }
+
+        logger.trace("Created module {}", moduleClazz.getSimpleName());
 
         return moduleBuilder.build();
     }

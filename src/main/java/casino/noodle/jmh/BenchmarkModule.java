@@ -26,4 +26,9 @@ public class BenchmarkModule extends CommandModuleBase<BenchmarkCommandContext> 
     public Mono<CommandResult> e(int arg1) {
         return Mono.empty();
     }
+
+    @CommandDescription(aliases = "f")
+    public Mono<CommandResult> f(String one, String two, String three, String four, String five) {
+        return Mono.empty();
+    }
 }

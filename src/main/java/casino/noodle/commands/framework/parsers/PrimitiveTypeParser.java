@@ -13,7 +13,7 @@ public class PrimitiveTypeParser<T> implements TypeParser<T> {
         return input.charAt(0);
     };
 
-    public static final ImmutableMap<Class<?>, PrimitiveTypeParser<?>> DEFAULT_PARSERS = ImmutableMap.<Class<?>, PrimitiveTypeParser<?>>builder()
+    public static final ImmutableMap<Class<?>, TypeParser<?>> DEFAULT_PARSERS = ImmutableMap.<Class<?>, TypeParser<?>>builder()
         .put(boolean.class, new PrimitiveTypeParser<>(Boolean::parseBoolean, boolean.class))
         .put(Boolean.class, new PrimitiveTypeParser<>(Boolean::parseBoolean, Boolean.class))
 

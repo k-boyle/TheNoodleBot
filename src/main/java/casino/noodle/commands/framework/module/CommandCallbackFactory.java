@@ -4,6 +4,8 @@ import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.results.command.CommandResult;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Streams;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import javax.tools.DiagnosticCollector;
@@ -65,6 +67,8 @@ class CommandCallbackFactory {
 
     private static final String CLASSPATH = System.getProperty("java.class.path");
 
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
     private final JavaCompiler javaCompiler;
     private final StandardJavaFileManager standardJavaFileManager;
 
@@ -77,6 +81,8 @@ class CommandCallbackFactory {
             Class<T> concreteCommandContextClazz,
             Class<? extends CommandModuleBase<T>> moduleClazz,
             Method method) {
+        logger.trace("Creating command callback from {}", method.getName());
+
         Constructor<?>[] constructors = moduleClazz.getConstructors();
         Preconditions.checkState(constructors.length == 1, "There must be only 1 public constructor");
 
@@ -171,6 +177,8 @@ class CommandCallbackFactory {
             concreteCommandContextPackage
         );
 
+        logger.trace("Generated code\n{}", code);
+
         // based on https://github.com/medallia/javaone2016/blob/master/src/main/java/com/medallia/codegen/JavaCodeGenerator.java
         List<JavaFileObject> compilationUnits = Collections.singletonList(new SourceFile(URI.create(generatedClassName), code));
         FileManager fileManager = new FileManager(standardJavaFileManager);
@@ -194,6 +202,8 @@ class CommandCallbackFactory {
             compilationUnits
         );
 
+        logger.trace("Compiling class {}", generatedClassName);
+
         boolean success = compilationTask.call();
         Preconditions.checkState(
             success,
@@ -204,6 +214,8 @@ class CommandCallbackFactory {
         var classLoader = new ClassLoader(moduleClazz.getClassLoader()) {
             Class<?> clazz = defineClass(null, byteCode, 0, byteCode.length);
         };
+
+        logger.trace("Creating generated class {}", generatedClassName);
         Class<? extends CommandCallback> generatedClass = classLoader.clazz.asSubclass(CommandCallback.class);
         try {
             return (CommandCallback) generatedClass.getDeclaredConstructors()[0].newInstance();

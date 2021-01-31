@@ -14,17 +14,17 @@ import reactor.core.publisher.Mono;
 
 import java.util.concurrent.TimeUnit;
 
-@BenchmarkMode({Mode.AverageTime})
+@BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Benchmark)
 @Fork(1)
-public class CommandExecutionBenchmark {
+public class CommandTotalExecutionBenchmark {
     private final CommandHandler<BenchmarkCommandContext> commandHandler = CommandHandler.builderForContext(BenchmarkCommandContext.class)
         .withBeanProvider(BeanProvider.get())
         .withModule(BenchmarkModule.class)
         .build();
 
-    private final BenchmarkCommandContext context = new BenchmarkCommandContext(BeanProvider.get());
+    private final BenchmarkCommandContext context = new BenchmarkCommandContext();
 
     @Benchmark
     public Mono<Result> commandNoParameters() {
@@ -49,5 +49,10 @@ public class CommandExecutionBenchmark {
     @Benchmark
     public Mono<Result> commandIntParameter() {
         return commandHandler.executeAsync("e 10", context);
+    }
+
+    @Benchmark
+    public Mono<Result> commandFiveParameters() {
+        return commandHandler.executeAsync("f abc def ghi jkl mno", context);
     }
 }

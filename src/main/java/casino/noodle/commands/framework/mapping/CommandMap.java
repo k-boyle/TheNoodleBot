@@ -10,9 +10,9 @@ import java.util.List;
 
 // based on https://github.com/Quahu/Qmmands/blob/master/src/Qmmands/Mapping/CommandMap.cs
 public class CommandMap {
-    private final CommandNode rootNode;
+    private final CommandMapNode rootNode;
 
-    private CommandMap(CommandNode rootNode) {
+    private CommandMap(CommandMapNode rootNode) {
         this.rootNode = rootNode;
     }
 
@@ -25,12 +25,12 @@ public class CommandMap {
     }
 
     public static class Builder {
-        private final CommandNode.Builder rootNode;
+        private final CommandMapNode.Builder rootNode;
 
         private boolean invalidState;
 
         private Builder() {
-            this.rootNode = CommandNode.builder();
+            this.rootNode = CommandMapNode.builder();
         }
 
         public Builder map(Module module) {

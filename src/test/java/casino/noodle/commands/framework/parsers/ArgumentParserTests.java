@@ -3,10 +3,11 @@ package casino.noodle.commands.framework.parsers;
 import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.TestCommandBuilder;
 import casino.noodle.commands.framework.TestCommandContext;
+import casino.noodle.commands.framework.exceptions.InvalidResultException;
 import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.results.ExecutionErrorResult;
 import casino.noodle.commands.framework.results.Result;
-import casino.noodle.commands.framework.results.argumentparser.ArgumentMismatchArgumentParserResult;
+import casino.noodle.commands.framework.results.argumentparser.FailedArgumentParserResult;
 import casino.noodle.commands.framework.results.argumentparser.SuccessfulArgumentParserResult;
 import casino.noodle.commands.framework.results.typeparser.FailedTypeParserResult;
 import casino.noodle.commands.framework.results.typeparser.TypeParserResult;
@@ -23,6 +24,9 @@ import java.util.stream.Stream;
 public class ArgumentParserTests {
     private static final Command COMMAND_INT_ARG_NOT_REMAINDER = new TestCommandBuilder()
         .addParameter(int.class, false)
+        .build();
+
+    private static final Command COMMAND_NO_PARAMETERS = new TestCommandBuilder()
         .build();
 
     private static final Command COMMAND_LONG_ARG_NOT_REMAINDER = new TestCommandBuilder()
@@ -51,18 +55,27 @@ public class ArgumentParserTests {
         ArgumentParser argumentParser = new ArgumentParser(ImmutableMap.copyOf(PrimitiveTypeParser.DEFAULT_PARSERS));
         Assertions.assertThrows(
             NullPointerException.class,
-            () -> argumentParser.parse(new TestCommandContext(), COMMAND_MISSING_PARAMETER_PARSER, new String[]{ "string" })
+            () -> argumentParser.parse(new TestCommandContext(COMMAND_MISSING_PARAMETER_PARSER), "string", 0)
+        );
+    }
+
+    @Test
+    public void testArgumentParserThrowsOnBadResult() {
+        ArgumentParser argumentParser = new ArgumentParser(ImmutableMap.of(int.class, new BadResultParser()));
+        Assertions.assertThrows(
+            InvalidResultException.class,
+            () -> argumentParser.parse(new TestCommandContext(COMMAND_INT_ARG_NOT_REMAINDER), "string", 0)
         );
     }
 
     @ParameterizedTest
     @MethodSource("argumentParserTestSource")
-    public void argumentParserTest(Command command, String[] arguments, Result expectedResult) {
+    public void argumentParserTest(Command command, String arguments, Result expectedResult) {
         HashMap<Class<?>, TypeParser<?>> parsers = new HashMap<>(PrimitiveTypeParser.DEFAULT_PARSERS);
         parsers.put(Long.class, new BadParser());
 
         ArgumentParser argumentParser = new ArgumentParser(ImmutableMap.copyOf(parsers));
-        Result actualResult = argumentParser.parse(new TestCommandContext(), command, arguments);
+        Result actualResult = argumentParser.parse(new TestCommandContext(command), arguments, 0);
         Assertions.assertEquals(expectedResult, actualResult);
     }
 
@@ -73,47 +86,66 @@ public class ArgumentParserTests {
         }
     }
 
+    public static class BadResultParser implements TypeParser<Integer> {
+        @Override
+        public TypeParserResult parse(CommandContext context, String input) {
+            return new BadResult();
+        }
+    }
+
+    private static class BadResult implements TypeParserResult {
+        @Override
+        public boolean isSuccess() {
+            return true;
+        }
+    }
+
     private static Stream<Arguments> argumentParserTestSource() {
         return Stream.of(
             Arguments.of(
                 COMMAND_INT_ARG_NOT_REMAINDER,
-                new String[] { "100" },
+                "100",
                 new SuccessfulArgumentParserResult(new Object[]{ 100 })
             ),
             Arguments.of(
                 COMMAND_INT_ARG_NOT_REMAINDER,
-                new String[] { "100", "200" },
-                new ArgumentMismatchArgumentParserResult(COMMAND_INT_ARG_NOT_REMAINDER, ArgumentMismatchArgumentParserResult.Reason.TOO_MANY_ARGUMENTS)
+                "100 200",
+                new FailedArgumentParserResult(COMMAND_INT_ARG_NOT_REMAINDER, FailedArgumentParserResult.Reason.TOO_MANY_ARGUMENTS,  3)
             ),
             Arguments.of(
                 COMMAND_INT_ARG_NOT_REMAINDER,
-                new String[0],
-                new ArgumentMismatchArgumentParserResult(COMMAND_INT_ARG_NOT_REMAINDER, ArgumentMismatchArgumentParserResult.Reason.TOO_FEW_ARGUMENTS)
+                "",
+                new FailedArgumentParserResult(COMMAND_INT_ARG_NOT_REMAINDER, FailedArgumentParserResult.Reason.TOO_FEW_ARGUMENTS, 0)
             ),
             Arguments.of(
                 COMMAND_INT_ARG_NOT_REMAINDER,
-                new String[] { "string" },
+                "string",
                 new FailedTypeParserResult(String.format("Failed to parse %s as %s", "string", int.class))
             ),
             Arguments.of(
                 COMMAND_LONG_ARG_NOT_REMAINDER,
-                new String[] { "100" },
+                "100" ,
                 new ExecutionErrorResult(COMMAND_LONG_ARG_NOT_REMAINDER,  new RuntimeException("Bad Parse"))
             ),
             Arguments.of(
                 COMMAND_STRING_NOT_ARG_REMAINDER,
-                new String[] { "string" },
+                "string",
                 new SuccessfulArgumentParserResult(new Object[]{ "string" })
             ),
             Arguments.of(
                 COMMAND_STRING_ARG_REMAINDER,
-                new String[] { "string 123" },
+                "string 123" ,
                 new SuccessfulArgumentParserResult(new Object[]{ "string 123" })
             ),
             Arguments.of(
                 COMMAND_STRING_STRING_ARG_REMAINDER,
-                new String[] { "string", "123 456" },
+                "string 123 456",
                 new SuccessfulArgumentParserResult(new Object[]{ "string", "123 456" })
+            ),
+            Arguments.of(
+                COMMAND_NO_PARAMETERS,
+                "",
+                new SuccessfulArgumentParserResult(new Object[0])
             )
         );
     }
