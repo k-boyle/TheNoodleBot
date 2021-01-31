@@ -1,9 +1,9 @@
-package casino.noodle.commands.framework;
+package casino.noodle.commands.framework.parsers;
 
+import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.exceptions.InvalidResultException;
 import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.module.CommandParameter;
-import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.ExecutionErrorResult;
 import casino.noodle.commands.framework.results.FailedResult;
 import casino.noodle.commands.framework.results.Result;
@@ -18,12 +18,12 @@ import com.google.common.collect.ImmutableMap;
 import java.util.StringJoiner;
 
 // todo add support for (escaped-)quotes
-class ArgumentParser {
+public class ArgumentParser {
     private static final String SPACE = " ";
 
     private final ImmutableMap<Class<?>, TypeParser<?>> typeParserByClass;
 
-    ArgumentParser(ImmutableMap<Class<?>, TypeParser<?>> typeParserByClass) {
+    public ArgumentParser(ImmutableMap<Class<?>, TypeParser<?>> typeParserByClass) {
         this.typeParserByClass = typeParserByClass;
     }
 

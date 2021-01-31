@@ -12,6 +12,7 @@ public abstract class CommandModuleBase<T extends CommandContext> {
         return context;
     }
 
+    // todo figure out how to not expose this
     public void setContext(T context) {
         this.context = context;
     }

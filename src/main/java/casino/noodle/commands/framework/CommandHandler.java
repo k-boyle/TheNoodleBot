@@ -7,6 +7,7 @@ import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
+import casino.noodle.commands.framework.parsers.ArgumentParser;
 import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.ExecutionErrorResult;

@@ -2,6 +2,8 @@ package casino.noodle.commands.framework.results.argumentparser;
 
 import casino.noodle.commands.framework.results.SuccessfulResult;
 
+import java.util.Arrays;
+
 public record SuccessfulArgumentParserResult(Object[] parsedArguments) implements SuccessfulResult, ArgumentParserResult {
     private static class SingletonHolder {
         public static final SuccessfulArgumentParserResult EMPTY = new SuccessfulArgumentParserResult(new Object[0]);
@@ -14,5 +16,18 @@ public record SuccessfulArgumentParserResult(Object[] parsedArguments) implement
     @Override
     public boolean isSuccess() {
         return true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SuccessfulArgumentParserResult that = (SuccessfulArgumentParserResult) o;
+        return Arrays.equals(parsedArguments, that.parsedArguments);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(parsedArguments);
     }
 }
