@@ -6,6 +6,7 @@ import casino.noodle.commands.framework.CommandHandler;
 import casino.noodle.commands.framework.results.FailedResult;
 import casino.noodle.commands.framework.results.command.CommandMessageResult;
 import casino.noodle.configurations.CommandConfiguration;
+import casino.noodle.configurations.ModuleConfiguration;
 import com.google.common.eventbus.Subscribe;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
@@ -16,7 +17,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Component;
 
 @Component
-@Import(CommandConfiguration.class)
+@Import({CommandConfiguration.class, ModuleConfiguration.class})
 public class MessageCreateHandler implements Handler<MessageCreateEvent> {
     private final CommandHandler<NoodleCommandContext> commandHandler;
     private final BeanProvider beanProvider;

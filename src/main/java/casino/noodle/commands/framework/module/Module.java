@@ -21,13 +21,18 @@ public class Module {
     private final ImmutableList<Precondition> preconditions;
     private final Optional<String> description;
     private final ImmutableList<Class<?>> beans;
+    private final boolean singleton;
+    private final boolean synchronised;
 
     private Module(
-            String name, ImmutableSet<String> groups,
+            String name,
+            ImmutableSet<String> groups,
             List<Command.Builder> commands,
             ImmutableList<Precondition> preconditions,
             Optional<String> description,
-            ImmutableList<Class<?>> beans) {
+            ImmutableList<Class<?>> beans,
+            boolean singleton,
+            boolean synchronised) {
         this.name = name;
         this.groups = groups;
         this.commands = commands.stream()
@@ -36,6 +41,8 @@ public class Module {
         this.preconditions = preconditions;
         this.description = description;
         this.beans = beans;
+        this.singleton = singleton;
+        this.synchronised = synchronised;
     }
 
     static Builder builder() {
@@ -84,6 +91,14 @@ public class Module {
         return beans;
     }
 
+    public boolean singleton() {
+        return singleton;
+    }
+
+    public boolean synchronised() {
+        return synchronised;
+    }
+
     public static class Builder {
         private static final String SPACE = " ";
 
@@ -94,6 +109,8 @@ public class Module {
 
         private String name;
         private String description;
+        private boolean singleton;
+        private boolean synchronised;
 
         private Builder() {
             this.groups = ImmutableSet.builder();
@@ -138,6 +155,26 @@ public class Module {
             return this;
         }
 
+        public Builder singleton() {
+            this.singleton = true;
+            return this;
+        }
+
+        public Builder withSingleton(boolean singleton) {
+            this.singleton = singleton;
+            return this;
+        }
+
+        public Builder synchronised() {
+            this.synchronised = true;
+            return this;
+        }
+
+        public Builder withSynchronised(boolean synchronised) {
+            this.synchronised = synchronised;
+            return this;
+        }
+
         public Module build() {
             Preconditions.checkNotNull(name, "A module name must be specified");
 
@@ -147,7 +184,9 @@ public class Module {
                 commands,
                 preconditions.build(),
                 Optional.ofNullable(description),
-                beans.build());
+                beans.build(),
+                singleton,
+                synchronised);
         }
     }
 }

@@ -1,5 +1,6 @@
 package casino.noodle.commands.framework.module;
 
+import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.CommandContext;
 import casino.noodle.commands.framework.results.command.CommandResult;
 import com.google.common.base.Preconditions;
@@ -24,9 +25,11 @@ import java.io.StringWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -37,6 +40,10 @@ class CommandCallbackFactory {
     private static final String CLASS_NAME_TEMPLATE = "%s%s%d";
     private static final String BEANS_CAST_TEMPLATE = "(%s)beans[%d]";
     private static final String PARAMETER_CAST_TEMPLATE = "(%s)parameters[%d]";
+    private static final String FIELD = "private final %s %s;";
+    private static final String ASSIGNMENT = "this.%1$s = %1$s;";
+    private static final String CTOR_PARAM = "%s %s";
+    private static final String MODULE_INLINE_INIT = "%1$s module = new %1$s(%2$s);";
 
     private static final String CLASS_TEMPLATE = """
         package %1$s;
@@ -51,16 +58,23 @@ class CommandCallbackFactory {
         %17$s
         
         public final class %2$s implements %11$s {
+            %20$s
+            
+            public %2$s(%22$s) {
+                %23$s
+            }
+        
             @Override
-            public %3$s<%4$s> execute(%5$s context, Object[] beans, Object[] parameters) {
+            public %21$s%3$s<%4$s> execute(%5$s context, Object[] beans, Object[] parameters) {
                 %8$s
-                %6$s module = new %6$s(%7$s);
+                %7$s
                 module.setContext((%18$s) context);
                 try {
                     return module.%9$s(%10$s);
                 } catch (Exception ex) {
                     return %3$s.error(ex);
                 }
+                %24$s
             }
         }        
         """;
@@ -77,10 +91,15 @@ class CommandCallbackFactory {
         this.standardJavaFileManager = javaCompiler.getStandardFileManager(null, null, null);
     }
 
+    // todo clean this up, not really important rn but it's big spaghet
     public <T extends CommandContext> CommandCallback createCommandCallback(
             Class<T> concreteCommandContextClazz,
             Class<? extends CommandModuleBase<T>> moduleClazz,
-            Method method) {
+            boolean singleton,
+            Object moduleLock,
+            boolean commandSynchronised,
+            Method method,
+            BeanProvider beanProvider) {
         logger.trace("Creating command callback from {}", method.getName());
 
         Constructor<?>[] constructors = moduleClazz.getConstructors();
@@ -98,13 +117,41 @@ class CommandCallbackFactory {
             additionalImports.append(String.format(IMPORT_TEMPLATE, constructorParameterType.getPackageName(), constructorParameterType.getSimpleName()));
         }
 
-        String beansDestructed = Streams.zip(
-            Arrays.stream(constructorParameterTypes),
-            IntStream.range(0, constructorParameterTypes.length).boxed(),
-            (parameter, index) -> String.format(BEANS_CAST_TEMPLATE, parameter.getSimpleName(), index)
-        )
-            .collect(Collectors.joining(", "));
+        String moduleSimpleName = moduleClazz.getSimpleName();
+        String modulePackage = moduleClazz.getPackageName();
 
+        String generatedClassName = String.format(
+            CLASS_NAME_TEMPLATE,
+            moduleSimpleName,
+            method.getName(),
+            System.nanoTime()
+        );
+
+        CommandModuleBase<T> module = getModule(singleton, moduleClazz, beanProvider);
+
+        StringJoiner fields = new StringJoiner("\n    ");
+        StringJoiner ctorArgs = new StringJoiner(", ");
+        StringJoiner ctorAssignment = new StringJoiner("\n        ");
+
+        List<Object> ctorParams = new ArrayList<>();
+
+        if (module != null) {
+            fields.add(String.format(FIELD, moduleClazz.getSimpleName(), "module"));
+            ctorArgs.add(String.format(CTOR_PARAM, moduleClazz.getSimpleName(), "module"));
+            ctorAssignment.add(String.format(ASSIGNMENT, "module"));
+            ctorParams.add(module);
+        }
+
+        if (moduleLock != null) {
+            fields.add(String.format(FIELD, "Object", "lock"));
+            ctorArgs.add(String.format(CTOR_PARAM, "Object", "lock"));
+            ctorAssignment.add(String.format(ASSIGNMENT, "lock"));
+            ctorParams.add(moduleLock);
+        }
+
+        String moduleInlineInit = module != null
+            ? OBSOLETE
+            : String.format(MODULE_INLINE_INIT, moduleSimpleName, deconstructBeans(constructorParameterTypes));
 
         Class<?>[] methodParameterTypes = method.getParameterTypes();
         for (Class<?> methodParameterType : methodParameterTypes) {
@@ -123,13 +170,6 @@ class CommandCallbackFactory {
 
         String package0 = CommandCallbackFactory.class.getPackageName();
 
-        String generatedClassName = String.format(
-            CLASS_NAME_TEMPLATE,
-            moduleClazz.getSimpleName(),
-            method.getName(),
-            System.nanoTime()
-        );
-
         Class<CommandCallback> commandCallbackClazz = CommandCallback.class;
         String commandCallbackSimpleName = commandCallbackClazz.getSimpleName();
         String commandCallbackPackage = commandCallbackClazz.getPackageName();
@@ -146,8 +186,6 @@ class CommandCallbackFactory {
         String commandContextSimpleName = commandContextClazz.getSimpleName();
         String commandContextPackage = commandContextClazz.getPackageName();
 
-        String moduleSimpleName = moduleClazz.getSimpleName();
-        String modulePackage = moduleClazz.getPackageName();
 
         String concreteCommandContextSimpleName = concreteCommandContextClazz.getSimpleName();
         String concreteCommandContextPackage = concreteCommandContextClazz.getPackageName();
@@ -162,8 +200,8 @@ class CommandCallbackFactory {
             commandResultSimpleName,
             commandContextSimpleName,
             moduleSimpleName,
-            beansDestructed,
-            OBSOLETE,
+            moduleInlineInit,
+            moduleLock != null ? "synchronized(lock) {" : OBSOLETE,
             methodName,
             parametersDestructed,
             commandCallbackSimpleName,
@@ -174,7 +212,12 @@ class CommandCallbackFactory {
             modulePackage,
             additionalImports.toString(),
             concreteCommandContextSimpleName,
-            concreteCommandContextPackage
+            concreteCommandContextPackage,
+            fields.toString(),
+            commandSynchronised ? "synchronized " : OBSOLETE,
+            ctorArgs.toString(),
+            ctorAssignment.toString(),
+            moduleLock != null ? "}" : OBSOLETE
         );
 
         logger.trace("Generated code\n{}", code);
@@ -186,7 +229,7 @@ class CommandCallbackFactory {
         DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<>();
         List<String> options = List.of(
             "--release",
-            System.getProperty("java.version").replace("-ea", ""),
+            System.getProperty("java.specification.version"),
             "--enable-preview",
             "-g",
             "-proc:none",
@@ -218,10 +261,34 @@ class CommandCallbackFactory {
         logger.trace("Creating generated class {}", generatedClassName);
         Class<? extends CommandCallback> generatedClass = classLoader.clazz.asSubclass(CommandCallback.class);
         try {
-            return (CommandCallback) generatedClass.getDeclaredConstructors()[0].newInstance();
+            Constructor<?> callbackConstructor = generatedClass.getDeclaredConstructors()[0];
+            return (CommandCallback) (!ctorParams.isEmpty() ? callbackConstructor.newInstance(ctorParams.toArray()) : callbackConstructor.newInstance());
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    private static <T extends CommandContext> CommandModuleBase<T> getModule(
+            boolean singleton,
+            Class<? extends CommandModuleBase<T>> moduleClazz,
+            BeanProvider beanProvider) {
+        if (!singleton) {
+            return null;
+        }
+
+        return Preconditions.checkNotNull(
+            beanProvider.getBean(moduleClazz),
+            "Singleton module must be supplied by the beanProvider"
+        );
+    }
+
+    private String deconstructBeans(Class<?>[] constructorParameterTypes) {
+        return Streams.zip(
+            Arrays.stream(constructorParameterTypes),
+            IntStream.range(0, constructorParameterTypes.length).boxed(),
+            (parameter, index) -> String.format(BEANS_CAST_TEMPLATE, parameter.getSimpleName(), index)
+        )
+            .collect(Collectors.joining(", "));
     }
 
     private static class SourceFile extends SimpleJavaFileObject {

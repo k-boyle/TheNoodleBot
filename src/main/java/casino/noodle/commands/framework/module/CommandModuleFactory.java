@@ -26,6 +26,7 @@ public final class CommandModuleFactory {
     private CommandModuleFactory() {
     }
 
+    // todo this has gotten very messy
     public static <S extends CommandContext, T extends CommandModuleBase<S>> Module create(
             Class<S> contextClazz,
             Class<T> moduleClazz,
@@ -48,7 +49,20 @@ public final class CommandModuleFactory {
         }
 
         ModuleDescription moduleDescriptionAnnotation = moduleClazz.getAnnotation(ModuleDescription.class);
+        boolean singleton = false;
+        boolean moduleSynchronised = false;
+        Object moduleLock = null;
         if (moduleDescriptionAnnotation != null) {
+            singleton = moduleDescriptionAnnotation.singleton();
+            moduleBuilder.withSingleton(singleton);
+
+            moduleSynchronised = moduleDescriptionAnnotation.synchronised();
+            moduleBuilder.withSynchronised(moduleSynchronised);
+
+            if (moduleSynchronised) {
+                moduleLock = new Object();
+            }
+
             if (!Strings.isNullOrEmpty(moduleDescriptionAnnotation.name())) {
                 moduleBuilder.withName(moduleDescriptionAnnotation.name());
             }
@@ -91,9 +105,20 @@ public final class CommandModuleFactory {
                 "A command must have aliases if the module has no groups"
             );
 
+            boolean commandSynchronised = commandDescriptionAnnotation.synchronised();
+
             Command.Builder commandBuilder = Command.builder()
                 .withName(method.getName())
-                .withCallback(callbackFactory.createCommandCallback(contextClazz, moduleClazz, method));
+                .withSynchronised(commandSynchronised)
+                .withCallback(callbackFactory.createCommandCallback(
+                    contextClazz,
+                    moduleClazz,
+                    singleton,
+                    moduleLock,
+                    commandSynchronised,
+                    method,
+                    beanProvider
+                ));
 
             for (String alias : commandDescriptionAnnotation.aliases()) {
                 commandBuilder.withAliases(alias);

@@ -14,4 +14,5 @@ public @interface CommandDescription {
     String[] aliases();
     String description() default "";
     Class<? extends Precondition>[] preconditions() default {};
+    boolean synchronised() default false;
 }

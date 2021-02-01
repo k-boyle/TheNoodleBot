@@ -14,4 +14,6 @@ public @interface ModuleDescription {
     String[] groups() default {};
     String description() default "";
     Class<? extends Precondition>[] preconditions() default {};
+    boolean singleton() default false;
+    boolean synchronised() default false;
 }
