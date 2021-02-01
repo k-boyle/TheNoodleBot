@@ -1,4 +1,4 @@
-package casino.noodle.jmh;
+package casino.noodle.commands.framework.jmh;
 
 import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.module.Command;
@@ -15,9 +15,9 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -33,26 +33,26 @@ public class ArgumentParserBenchmark {
         BeanProvider.get()
     );
 
-    private final Map<String, List<Command>> commandMap = module.commands().stream()
-        .collect(Collectors.groupingBy(command -> command.aliases().stream().findFirst().get()));
+    private final Map<String, Command> commands = module.commands().stream()
+        .collect(Collectors.toMap(Command::name, Function.identity()));
 
     @Benchmark
     public Result commandNotParameters() {
-        return argumentParser.parse(new BenchmarkCommandContext(), commandMap.get("a").get(0), "", 0);
+        return argumentParser.parse(new BenchmarkCommandContext(), commands.get("a"), "", 0);
     }
 
     @Benchmark
     public Result commandOneParameter() {
-        return argumentParser.parse(new BenchmarkCommandContext(), commandMap.get("b").get(0), "abc", 0);
+        return argumentParser.parse(new BenchmarkCommandContext(), commands.get("b"), "abc", 0);
     }
 
     @Benchmark
     public Result commandRemainderParameter() {
-        return argumentParser.parse(new BenchmarkCommandContext(), commandMap.get("c").get(0), "abc def ghi", 0);
+        return argumentParser.parse(new BenchmarkCommandContext(), commands.get("c"), "abc def ghi", 0);
     }
 
     @Benchmark
     public Result commandFiveParameters() {
-        return argumentParser.parse(new BenchmarkCommandContext(), commandMap.get("f").get(0), "abc def ghi jkl mno", 0);
+        return argumentParser.parse(new BenchmarkCommandContext(), commands.get("f"), "abc def ghi jkl mno", 0);
     }
 }

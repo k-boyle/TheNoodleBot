@@ -12,8 +12,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 class CommandMapNode {
-    private static final String[] EMPTY = new String[0];
-
     private final ImmutableMap<String, List<Command>> commandsByAlias;
     private final ImmutableMap<String, CommandMapNode> nodeByAlias;
 
@@ -37,28 +35,25 @@ class CommandMapNode {
 
         if (nextSpace == -1) {
             String segment = index == 0 ? input : input.substring(index);
-            List<Command> commands = commandsByAlias.get(segment);
-            if (commands != null) {
-                pathLength++;
-                for (Command command : commands) {
-                    results.add(new CommandSearchResult(command, pathLength, segment, index + 1));
-                }
-            }
+            handleSegmentAsAlias(results, segment, input, pathLength, input.length() - 1);
         } else {
             String segment = input.substring(index, nextSpace);
-            List<Command> commands = commandsByAlias.get(segment);
-            if (commands != null) {
-                pathLength++;
-                for (Command command : commands) {
-                    results.add(new CommandSearchResult(command, pathLength, input, nextSpace + 1));
-                }
-                pathLength--;
-            }
+            handleSegmentAsAlias(results, segment, input, pathLength, nextSpace + 1);
 
             CommandMapNode commandMapNode = nodeByAlias.get(segment);
             if (commandMapNode != null) {
                 pathLength++;
                 commandMapNode.findCommands(results, pathLength, input, nextSpace + 1);
+            }
+        }
+    }
+
+    private void handleSegmentAsAlias(ImmutableList.Builder<CommandSearchResult> results, String segment, String input, int pathLength, int index) {
+        List<Command> commands = commandsByAlias.get(segment);
+        if (commands != null) {
+            pathLength++;
+            for (Command command : commands) {
+                results.add(new CommandSearchResult(command, pathLength, input, index));
             }
         }
     }

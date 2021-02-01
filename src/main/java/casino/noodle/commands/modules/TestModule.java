@@ -26,16 +26,16 @@ public class TestModule extends CommandModuleBase<NoodleCommandContext> {
                 remainder = true
             )
             String input) {
-        return reply("pong " + input + " " + gatewayDiscordClient.getSelfId());
+        return message("pong " + input + " " + gatewayDiscordClient.getSelfId());
     }
 
     @CommandDescription(aliases = { "ping", "p" }, description = "A test command")
     public Mono<CommandResult> testCommand2(String a, String input) {
-        return reply("pong2 " + input + " " + gatewayDiscordClient.getSelfId());
+        return message("pong2 " + input + " " + gatewayDiscordClient.getSelfId());
     }
 
     @CommandDescription(aliases = { "fail" }, preconditions = FailedPrecondition.class)
     public Mono<CommandResult> testCommand3() {
-        return reply("this should never reply");
+        return message("this should never reply");
     }
 }

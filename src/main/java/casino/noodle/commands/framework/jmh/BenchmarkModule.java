@@ -1,4 +1,4 @@
-package casino.noodle.jmh;
+package casino.noodle.commands.framework.jmh;
 
 import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.annotations.CommandDescription;

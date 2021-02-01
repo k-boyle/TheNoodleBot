@@ -1,4 +1,4 @@
-package casino.noodle.jmh;
+package casino.noodle.commands.framework.jmh;
 
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
@@ -8,6 +8,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 class BenchmarkRunner {
     public static void main(String[] args) throws RunnerException {
         Options options = new OptionsBuilder()
+//            .include(CommandExecutionBenchmark.class.getSimpleName())
             .include(CommandTotalExecutionBenchmark.class.getSimpleName())
 //            .include(CommandMapBenchmark.class.getSimpleName())
 //            .include(ArgumentParserBenchmark.class.getSimpleName())

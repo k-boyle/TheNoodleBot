@@ -17,7 +17,7 @@ public abstract class CommandModuleBase<T extends CommandContext> {
         this.context = context;
     }
 
-    protected Mono<CommandResult> reply(String reply) {
+    protected Mono<CommandResult> message(String reply) {
         return Mono.just(CommandMessageResult.from(context.command(), reply));
     }
 

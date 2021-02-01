@@ -68,7 +68,6 @@ public class CommandHandler<T extends CommandContext> {
                 continue;
             }
 
-
             Command command = searchResult.command();
             context.command = command;
 

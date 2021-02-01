@@ -9,6 +9,6 @@ import reactor.core.publisher.Mono;
 public class TestModule2 extends CommandModuleBase<NoodleCommandContext> {
     @CommandDescription(aliases = { "pong" })
     public Mono<CommandResult> pong() {
-        return reply("ping");
+        return message("ping");
     }
 }

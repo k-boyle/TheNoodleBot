@@ -29,7 +29,6 @@ public class ArgumentParser {
         return parse(context, context.command(), input, index);
     }
 
-    // todo garbage code but works:tm:
     public Result parse(CommandContext context, Command command, String input, int index) {
         ImmutableList<CommandParameter> parameters = command.parameters();
 
@@ -38,13 +37,17 @@ public class ArgumentParser {
         }
 
         if (parameters.isEmpty()) {
-            return SuccessfulArgumentParserResult.empty();
+            if (input.length() - 1 == index) {
+                return SuccessfulArgumentParserResult.empty();
+            } else {
+                return new FailedArgumentParserResult(command, FailedArgumentParserResult.Reason.TOO_MANY_ARGUMENTS, index);
+            }
         }
 
-        Object[] parsedArguments = new Object[parameters.size()];
+        Object[] parsedArguments = null;
         for (int p = 0; p < parameters.size(); p++) {
+            String currentParameter = null;
             CommandParameter parameter = parameters.get(p);
-            Class<?> type = parameter.type();
 
             for (; index < input.length(); index++) {
                 char currentCharacter = input.charAt(index);
@@ -66,21 +69,8 @@ public class ArgumentParser {
             }
 
             if (parameter.remainder()) {
-                String remainder = input.substring(index);
+                currentParameter = input.substring(index);
                 index = input.length();
-                if (type == String.class) {
-                    parsedArguments[p] = remainder;
-                    break;
-                }
-
-                Result result = parse(type, context, remainder);
-                if (result instanceof SuccessfulTypeParserResult success) {
-                    parsedArguments[p] = success.value();
-                } else if (result instanceof FailedResult failedResult) {
-                    return failedResult;
-                } else {
-                    throw new InvalidResultException(SuccessfulTypeParserResult.class, result.getClass());
-                }
             } else {
                 int paramStart = index;
                 for (; index < input.length(); index++) {
@@ -98,23 +88,9 @@ public class ArgumentParser {
                             }
 
                             if (input.charAt(index - 1) != ESCAPE) {
-                                String param = paramStart + 1 == index
+                                currentParameter = paramStart + 1 == index
                                     ? ""
                                     : input.substring(paramStart + 1, index + 1);
-
-                                if (type == String.class) {
-                                    parsedArguments[p] = param;
-                                    break;
-                                }
-
-                                Result result = parse(type, context, param);
-                                if (result instanceof SuccessfulTypeParserResult success) {
-                                    parsedArguments[p] = success.value();
-                                } else if (result instanceof FailedResult failedResult) {
-                                    return failedResult;
-                                } else {
-                                    throw new InvalidResultException(SuccessfulTypeParserResult.class, result.getClass());
-                                }
 
                                 break;
                             }
@@ -123,44 +99,36 @@ public class ArgumentParser {
                         if (index >= input.length() - 1) {
                             return new FailedArgumentParserResult(command, FailedArgumentParserResult.Reason.MISSING_QUOTE, index);
                         }
-
-                        break;
                     } else if (currentCharacter == SPACE) {
-                        String param = input.substring(paramStart, index);
-
-                        if (type == String.class) {
-                            parsedArguments[p] = param;
-                            break;
-                        }
-
-                        Result result = parse(type, context, param);
-                        if (result instanceof SuccessfulTypeParserResult success) {
-                            parsedArguments[p] = success.value();
-                        } else if (result instanceof FailedResult failedResult) {
-                            return failedResult;
-                        } else {
-                            throw new InvalidResultException(SuccessfulTypeParserResult.class, result.getClass());
-                        }
+                        currentParameter = input.substring(paramStart, index);
                         break;
-                    } else if(index == input.length() - 1) {
-                        String param = paramStart == 0 ? input : input.substring(paramStart);
-
-                        if (type == String.class) {
-                            parsedArguments[p] = param;
-                            index++;
-                            break;
-                        }
-
-                        Result result = parse(type, context, param);
-                        if (result instanceof SuccessfulTypeParserResult success) {
-                            parsedArguments[p] = success.value();
-                        } else if (result instanceof FailedResult failedResult) {
-                            return failedResult;
-                        } else {
-                            throw new InvalidResultException(SuccessfulTypeParserResult.class, result.getClass());
-                        }
+                    } else if (index == input.length() - 1) {
+                        currentParameter = paramStart == 0 ? input : input.substring(paramStart);
+                        index++;
+                        break;
                     }
                 }
+            }
+
+            Class<?> type = parameter.type();
+            if (type == String.class) {
+                if (parsedArguments == null) {
+                    parsedArguments = new Object[parameters.size()];
+                }
+                parsedArguments[p] = currentParameter;
+                continue;
+            }
+
+            Result parseResult = parse(type, context, currentParameter);
+            if (parseResult instanceof SuccessfulTypeParserResult success) {
+                if (parsedArguments == null) {
+                    parsedArguments = new Object[parameters.size()];
+                }
+                parsedArguments[p] = success.value();
+            } else if (parseResult instanceof FailedResult failedResult) {
+                return failedResult;
+            } else {
+                throw new InvalidResultException(SuccessfulTypeParserResult.class, parseResult.getClass());
             }
         }
 
