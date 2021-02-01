@@ -4,7 +4,7 @@ import casino.noodle.commands.framework.BeanProvider;
 import casino.noodle.commands.framework.module.Command;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
-import casino.noodle.commands.framework.parsers.ArgumentParser;
+import casino.noodle.commands.framework.parsers.DefaultArgumentParser;
 import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.results.Result;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @State(Scope.Benchmark)
 @Fork(1)
 public class ArgumentParserBenchmark {
-    private final ArgumentParser argumentParser = new ArgumentParser(PrimitiveTypeParser.DEFAULT_PARSERS);
+    private final DefaultArgumentParser argumentParser = new DefaultArgumentParser(PrimitiveTypeParser.DEFAULT_PARSERS);
 
     private final Module module = CommandModuleFactory.create(
         BenchmarkCommandContext.class,

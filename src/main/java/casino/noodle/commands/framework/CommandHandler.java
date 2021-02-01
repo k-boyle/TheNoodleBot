@@ -8,6 +8,7 @@ import casino.noodle.commands.framework.module.CommandModuleBase;
 import casino.noodle.commands.framework.module.CommandModuleFactory;
 import casino.noodle.commands.framework.module.Module;
 import casino.noodle.commands.framework.parsers.ArgumentParser;
+import casino.noodle.commands.framework.parsers.DefaultArgumentParser;
 import casino.noodle.commands.framework.parsers.PrimitiveTypeParser;
 import casino.noodle.commands.framework.parsers.TypeParser;
 import casino.noodle.commands.framework.results.ExecutionErrorResult;
@@ -40,7 +41,7 @@ public class CommandHandler<T extends CommandContext> {
     private CommandHandler(Map<Class<?>, TypeParser<?>> typeParserByClass, CommandMap commandMapper) {
         this.commandMap = commandMapper;
         // todo potentially abstract out
-        this.argumentParser = new ArgumentParser(ImmutableMap.copyOf(typeParserByClass));
+        this.argumentParser = new DefaultArgumentParser(ImmutableMap.copyOf(typeParserByClass));
     }
 
     public static <T extends CommandContext> Builder<T> builderForContext(Class<T> contextClazz) {
@@ -89,6 +90,7 @@ public class CommandHandler<T extends CommandContext> {
             } catch (Exception ex) {
                 return Mono.just(new ExecutionErrorResult(command, ex));
             }
+
 
             Result argumentParserResult = argumentParser.parse(context, searchResult.input(), searchResult.offset());
 

@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.HashMap;
 import java.util.stream.Stream;
 
-public class ArgumentParserTests {
+public class DefaultArgumentParserTests {
     private static final Command COMMAND_INT_ARG_NOT_REMAINDER = new TestCommandBuilder()
         .addParameter(int.class, false)
         .build();
@@ -52,7 +52,7 @@ public class ArgumentParserTests {
 
     @Test
     public void testArgumentParserThrowsOnMissingTypeParser() {
-        ArgumentParser argumentParser = new ArgumentParser(ImmutableMap.copyOf(PrimitiveTypeParser.DEFAULT_PARSERS));
+        DefaultArgumentParser argumentParser = new DefaultArgumentParser(ImmutableMap.copyOf(PrimitiveTypeParser.DEFAULT_PARSERS));
         Assertions.assertThrows(
             NullPointerException.class,
             () -> argumentParser.parse(new TestCommandContext(COMMAND_MISSING_PARAMETER_PARSER), "string", 0)
@@ -61,7 +61,7 @@ public class ArgumentParserTests {
 
     @Test
     public void testArgumentParserThrowsOnBadResult() {
-        ArgumentParser argumentParser = new ArgumentParser(ImmutableMap.of(int.class, new BadResultParser()));
+        DefaultArgumentParser argumentParser = new DefaultArgumentParser(ImmutableMap.of(int.class, new BadResultParser()));
         Assertions.assertThrows(
             InvalidResultException.class,
             () -> argumentParser.parse(new TestCommandContext(COMMAND_INT_ARG_NOT_REMAINDER), "string", 0)
@@ -74,7 +74,7 @@ public class ArgumentParserTests {
         HashMap<Class<?>, TypeParser<?>> parsers = new HashMap<>(PrimitiveTypeParser.DEFAULT_PARSERS);
         parsers.put(Long.class, new BadParser());
 
-        ArgumentParser argumentParser = new ArgumentParser(ImmutableMap.copyOf(parsers));
+        DefaultArgumentParser argumentParser = new DefaultArgumentParser(ImmutableMap.copyOf(parsers));
         Result actualResult = argumentParser.parse(new TestCommandContext(command), arguments, 0);
         Assertions.assertEquals(expectedResult, actualResult);
     }
