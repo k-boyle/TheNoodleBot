@@ -24,7 +24,8 @@ public class TestCommandBuilder {
             ImmutableList.copyOf(parameters),
             ImmutableList.of(),
             null,
-            null
+            null,
+            false
         );
     }
 }
