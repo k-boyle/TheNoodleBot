@@ -131,11 +131,13 @@ public class Command {
         }
 
         public Builder withName(String name) {
+            Preconditions.checkNotNull(name, "name cannot be null");
             this.name = name;
             return this;
         }
 
         public Builder withAliases(String alias) {
+            Preconditions.checkNotNull(alias, "alias cannot be null");
             Preconditions.checkState(!alias.contains(SPACE), "Alias %s contains a space", alias);
             this.aliases.add(alias);
             return this;
@@ -147,16 +149,19 @@ public class Command {
         }
 
         public Builder withCallback(CommandCallback commandCallback) {
+            Preconditions.checkNotNull(commandCallback, "commandCallback cannot be null");
             this.commandCallback = commandCallback;
             return this;
         }
 
         public Builder withParameter(CommandParameter commandParameter) {
+            Preconditions.checkNotNull(commandParameter, "commandParameter cannot be null");
             this.parameters.add(commandParameter);
             return this;
         }
 
         public Builder withPrecondition(Precondition precondition) {
+            Preconditions.checkNotNull(precondition, "precondition cannot be null");
             this.preconditions.add(precondition);
             return this;
         }
@@ -178,7 +183,7 @@ public class Command {
                     !commandParameter.remainder() || i == parameters.size() - 1,
                     "Parameter %s of Command %s cannot be remainder only the final parameter can be remainder",
                     commandParameter.name(),
-                    this.name
+                    name
                 );
             }
 
@@ -191,12 +196,12 @@ public class Command {
             );
 
             return new Command(
-                this.name,
+                name,
                 aliases,
-                Optional.ofNullable(this.description),
-                this.commandCallback,
+                Optional.ofNullable(description),
+                commandCallback,
                 parameters,
-                this.preconditions.build(),
+                preconditions.build(),
                 commandSignature,
                 module);
         }

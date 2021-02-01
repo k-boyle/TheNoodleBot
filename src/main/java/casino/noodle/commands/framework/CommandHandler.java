@@ -38,10 +38,10 @@ public class CommandHandler<T extends CommandContext> {
     private final CommandMap commandMap;
     private final ArgumentParser argumentParser;
 
-    private CommandHandler(Map<Class<?>, TypeParser<?>> typeParserByClass, CommandMap commandMapper) {
+    private CommandHandler(CommandMap commandMapper, ArgumentParser argumentParser) {
         this.commandMap = commandMapper;
         // todo potentially abstract out
-        this.argumentParser = new DefaultArgumentParser(ImmutableMap.copyOf(typeParserByClass));
+        this.argumentParser = argumentParser;
     }
 
     public static <T extends CommandContext> Builder<T> builderForContext(Class<T> contextClazz) {
@@ -92,29 +92,36 @@ public class CommandHandler<T extends CommandContext> {
             }
 
 
-            Result argumentParserResult = argumentParser.parse(context, searchResult.input(), searchResult.offset());
+            try {
+                Result argumentParserResult = argumentParser.parse(context, searchResult.input(), searchResult.offset());
+                Preconditions.checkNotNull(argumentParserResult, "Argument parser must return a non-null result");
 
-            if (argumentParserResult instanceof FailedResult failedResult) {
-                if (searchResults.size() == 1) {
-                    return Mono.just(failedResult);
+                if (argumentParserResult instanceof FailedResult failedResult) {
+                    if (searchResults.size() == 1) {
+                        return Mono.just(failedResult);
+                    }
+
+                    if (failedResults == null) {
+                        failedResults = ImmutableList.builder();
+                    }
+                    failedResults.add(failedResult);
+                    continue;
                 }
 
-                if (failedResults == null) {
-                    failedResults = ImmutableList.builder();
+                logger.trace("Found command match, executing {}", command);
+
+                if (argumentParserResult instanceof SuccessfulArgumentParserResult success) {
+                    ImmutableList<Class<?>> beanClazzes = command.module().beans();
+                    Object[] beans = getBeans(context, beanClazzes);
+                    return command.commandCallback().execute(context, beans, success.parsedArguments()).cast(Result.class);
                 }
-                failedResults.add(failedResult);
-                continue;
+
+                throw new InvalidResultException(SuccessfulArgumentParserResult.class, argumentParserResult.getClass());
+            } catch (InvalidResultException ir) {
+                throw ir;
+            } catch (Exception ex) {
+                return Mono.just(new ExecutionErrorResult(command, ex));
             }
-
-            logger.trace("Found command match, executing {}", command);
-
-            if (argumentParserResult instanceof SuccessfulArgumentParserResult success) {
-                ImmutableList<Class<?>> beanClazzes = command.module().beans();
-                Object[] beans = getBeans(context, beanClazzes);
-                return command.commandCallback().execute(context, beans, success.parsedArguments()).cast(Result.class);
-            }
-
-            throw new InvalidResultException(SuccessfulArgumentParserResult.class, argumentParserResult.getClass());
         }
 
         assert failedResults != null;
@@ -146,6 +153,7 @@ public class CommandHandler<T extends CommandContext> {
         private final List<Class<? extends CommandModuleBase<T>>> commandModules;
 
         private BeanProvider beanProvider;
+        private ArgumentParser argumentParser;
 
         private Builder(Class<T> contextClazz) {
             this.contextClazz = contextClazz;
@@ -156,27 +164,41 @@ public class CommandHandler<T extends CommandContext> {
         }
 
         public <S >Builder<T> withTypeParser(Class<S> clazz, TypeParser<S> parser) {
+            Preconditions.checkNotNull(clazz, "Clazz cannot be null");
+            Preconditions.checkNotNull(parser, "Parser cannot be null");
             this.typeParserByClass.put(clazz, parser);
             return this;
         }
 
         public <S extends CommandModuleBase<T>> Builder<T> withModule(Class<S> moduleClazz) {
+            Preconditions.checkNotNull(moduleClazz, "moduleClazz cannot be null");
             this.commandModules.add(moduleClazz);
             return this;
         }
 
         public Builder<T> withBeanProvider(BeanProvider beanProvider) {
+            Preconditions.checkNotNull(beanProvider, "beanProvider cannot be null");
             this.beanProvider = beanProvider;
+            return this;
+        }
+
+        public Builder<T> withArgumentParser(ArgumentParser argumentParser) {
+            Preconditions.checkNotNull(argumentParser, "argumentParser cannot be null");
+            this.argumentParser = argumentParser;
             return this;
         }
 
         public CommandHandler<T> build() {
             for (Class<? extends CommandModuleBase<T>> moduleClazz : commandModules) {
-                Module module = CommandModuleFactory.create(contextClazz, moduleClazz, this.beanProvider);
+                Module module = CommandModuleFactory.create(contextClazz, moduleClazz, beanProvider);
                 this.commandMap.map(module);
             }
 
-            return new CommandHandler<T>(this.typeParserByClass, this.commandMap.build());
+            if (argumentParser == null) {
+                argumentParser = new DefaultArgumentParser(ImmutableMap.copyOf(typeParserByClass));
+            }
+
+            return new CommandHandler<T>(commandMap.build(), argumentParser);
         }
     }
 }

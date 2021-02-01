@@ -89,7 +89,7 @@ public class CommandMap {
 
         public CommandMap build() {
             Preconditions.checkState(!invalidState, "CommandMap has been put into an invalid state");
-            return new CommandMap(this.rootNode.build());
+            return new CommandMap(rootNode.build());
         }
     }
 }

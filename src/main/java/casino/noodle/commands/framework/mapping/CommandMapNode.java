@@ -118,7 +118,7 @@ class CommandMapNode {
             Map<String, CommandMapNode> nodeByAlias = this.nodeByAlias.entrySet()
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, es -> es.getValue().build()));
-            return new CommandMapNode(this.commandsByAlias, nodeByAlias);
+            return new CommandMapNode(commandsByAlias, nodeByAlias);
         }
     }
 }

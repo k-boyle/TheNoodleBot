@@ -1,7 +1,5 @@
-package casino.noodle.commands.framework;
+package casino.noodle.commands.framework.module;
 
-import casino.noodle.commands.framework.module.Command;
-import casino.noodle.commands.framework.module.CommandParameter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -13,7 +11,7 @@ public class TestCommandBuilder {
     private final List<CommandParameter> parameters = new ArrayList<>();
 
     public TestCommandBuilder addParameter(Class<?> type, boolean remainder) {
-        this.parameters.add(new CommandParameter(type, "", "", remainder));
+        this.parameters.add(new CommandParameter(type, Optional.empty(), "", remainder));
         return this;
     }
 

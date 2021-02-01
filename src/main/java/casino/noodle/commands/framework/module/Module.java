@@ -103,11 +103,13 @@ public class Module {
         }
 
         public Builder withName(String name) {
+            Preconditions.checkNotNull(name, "Name cannot be null");
             this.name = name;
             return this;
         }
 
         public Builder withGroup(String group) {
+            Preconditions.checkNotNull(group, "Group cannot be null");
             Preconditions.checkState(!group.contains(SPACE), "Group %s contains a space", group);
             this.groups.add(group);
             return this;
@@ -119,30 +121,33 @@ public class Module {
         }
 
         public Builder withCommand(Command.Builder command) {
+            Preconditions.checkNotNull(command, "command cannot be null");
             this.commands.add(command);
             return this;
         }
 
         public Builder withPrecondition(Precondition precondition) {
+            Preconditions.checkNotNull(precondition, "precondition cannot be null");
             this.preconditions.add(precondition);
             return this;
         }
 
         public Builder withBean(Class<?> bean) {
+            Preconditions.checkNotNull(bean, "bean cannot be null");
             this.beans.add(bean);
             return this;
         }
 
         public Module build() {
-            Preconditions.checkNotNull(this.name, "A module name must be specified");
+            Preconditions.checkNotNull(name, "A module name must be specified");
 
             return new Module(
-                this.name,
-                this.groups.build(),
-                this.commands,
-                this.preconditions.build(),
-                Optional.ofNullable(this.description),
-                this.beans.build());
+                name,
+                groups.build(),
+                commands,
+                preconditions.build(),
+                Optional.ofNullable(description),
+                beans.build());
         }
     }
 }

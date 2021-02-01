@@ -2,15 +2,18 @@ package casino.noodle.commands.framework.module;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Optional;
+
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class CommandParameter {
     private final Class<?> type;
-    private final String description;
+    private final Optional<String> description;
     private final String name;
     private final boolean remainder;
 
-    public CommandParameter(
+    CommandParameter(
             Class<?> type,
-            String description,
+            Optional<String> description,
             String name,
             boolean remainder) {
         this.type = type;
@@ -19,7 +22,7 @@ public final class CommandParameter {
         this.remainder = remainder;
     }
 
-    static Builder builder() {
+    public static Builder builder() {
         return new Builder();
     }
 
@@ -27,7 +30,7 @@ public final class CommandParameter {
         return type;
     }
 
-    public String description() {
+    public Optional<String> description() {
         return description;
     }
 
@@ -39,7 +42,7 @@ public final class CommandParameter {
         return remainder;
     }
 
-    static class Builder {
+    public static class Builder {
         private Class<?> type;
         private String description;
         private String name;
@@ -49,6 +52,7 @@ public final class CommandParameter {
         }
 
         public Builder withType(Class<?> type) {
+            Preconditions.checkNotNull(type, "type cannot be null");
             this.type = type;
             return this;
         }
@@ -59,6 +63,7 @@ public final class CommandParameter {
         }
 
         public Builder withName(String name) {
+            Preconditions.checkNotNull(name, "name cannot be null");
             this.name = name;
             return this;
         }
@@ -71,7 +76,7 @@ public final class CommandParameter {
         public CommandParameter build() {
             Preconditions.checkState(type != null, "A parameter type must be specified");
             Preconditions.checkState(name != null, "A parameter name must be specified");
-            return new CommandParameter(type, description, name, remainder);
+            return new CommandParameter(type, Optional.ofNullable(description), name, remainder);
         }
     }
 }
