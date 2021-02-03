@@ -1,16 +1,16 @@
 package casino.noodle.handlers;
 
 import casino.noodle.commands.NoodleCommandContext;
-import casino.noodle.commands.framework.BeanProvider;
-import casino.noodle.commands.framework.CommandHandler;
-import casino.noodle.commands.framework.results.FailedResult;
-import casino.noodle.commands.framework.results.command.CommandMessageResult;
 import casino.noodle.configurations.CommandConfiguration;
 import casino.noodle.configurations.ModuleConfiguration;
 import com.google.common.eventbus.Subscribe;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
+import kboyle.octane.core.BeanProvider;
+import kboyle.octane.core.CommandHandler;
+import kboyle.octane.core.results.FailedResult;
+import kboyle.octane.core.results.command.CommandMessageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;

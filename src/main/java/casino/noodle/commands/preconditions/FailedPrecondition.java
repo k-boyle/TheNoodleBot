@@ -1,8 +1,8 @@
 package casino.noodle.commands.preconditions;
 
-import casino.noodle.commands.framework.CommandContext;
-import casino.noodle.commands.framework.module.Precondition;
-import casino.noodle.commands.framework.results.precondition.PreconditionResult;
+import kboyle.octane.core.CommandContext;
+import kboyle.octane.core.module.Precondition;
+import kboyle.octane.core.results.precondition.PreconditionResult;
 
 public class FailedPrecondition implements Precondition {
     @Override

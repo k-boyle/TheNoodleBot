@@ -1,10 +1,10 @@
 package casino.noodle.commands.modules;
 
 import casino.noodle.commands.NoodleCommandContext;
-import casino.noodle.commands.framework.module.CommandModuleBase;
-import casino.noodle.commands.framework.module.annotations.CommandDescription;
-import casino.noodle.commands.framework.module.annotations.ModuleDescription;
-import casino.noodle.commands.framework.results.command.CommandResult;
+import kboyle.octane.core.module.CommandModuleBase;
+import kboyle.octane.core.module.annotations.CommandDescription;
+import kboyle.octane.core.module.annotations.ModuleDescription;
+import kboyle.octane.core.results.command.CommandResult;
 import reactor.core.publisher.Mono;
 
 @ModuleDescription(singleton = true, synchronised = true)
