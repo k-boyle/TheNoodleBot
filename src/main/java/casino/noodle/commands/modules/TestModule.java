@@ -1,13 +1,13 @@
 package casino.noodle.commands.modules;
 
 import casino.noodle.commands.NoodleCommandContext;
-import casino.noodle.commands.framework.module.CommandModuleBase;
-import casino.noodle.commands.framework.module.annotations.CommandDescription;
-import casino.noodle.commands.framework.module.annotations.ModuleDescription;
-import casino.noodle.commands.framework.module.annotations.ParameterDescription;
-import casino.noodle.commands.framework.results.command.CommandResult;
 import casino.noodle.commands.preconditions.FailedPrecondition;
 import discord4j.core.GatewayDiscordClient;
+import kboyle.octane.core.module.CommandModuleBase;
+import kboyle.octane.core.module.annotations.CommandDescription;
+import kboyle.octane.core.module.annotations.ModuleDescription;
+import kboyle.octane.core.module.annotations.ParameterDescription;
+import kboyle.octane.core.results.command.CommandResult;
 import reactor.core.publisher.Mono;
 
 @ModuleDescription(groups = { "a", "b" }, description = "A test module")

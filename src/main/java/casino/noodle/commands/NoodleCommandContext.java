@@ -1,7 +1,7 @@
 package casino.noodle.commands;
 
-import casino.noodle.commands.framework.BeanProvider;
-import casino.noodle.commands.framework.CommandContext;
+import kboyle.octane.core.BeanProvider;
+import kboyle.octane.core.CommandContext;
 
 public class NoodleCommandContext extends CommandContext {
     public NoodleCommandContext(BeanProvider beanProvider) {
