@@ -1,5 +1,9 @@
 {
   "extends": [
     "config:base"
-  ]
+  ],
+  "packageRules": [{
+    "managers": ["maven"],
+	  "registryUrls": ["https://oss.sonatype.org/content/repositories/snapshots"]
+  }]
 }
